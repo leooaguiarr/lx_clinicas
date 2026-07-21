@@ -1,0 +1,2 @@
+import type { LucideIcon } from "lucide-react";
+export function SummaryCard({label,value,note,icon:Icon}:{label:string;value:string;note?:string;icon?:LucideIcon}){return <div className="panel p-4"><div className="flex items-start justify-between"><p className="text-xs font-medium muted">{label}</p>{Icon&&<Icon size={17} className="text-[var(--primary)]"/>}</div><p className="mt-2 text-xl font-bold">{value}</p>{note&&<p className="mt-1 text-xs muted">{note}</p>}</div>}
