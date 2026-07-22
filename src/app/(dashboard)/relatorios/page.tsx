@@ -1,1 +1,45 @@
-import { PageHeader } from "@/components/page-header";import { SummaryCard } from "@/components/summary-card";export default function Relatorios(){return <><PageHeader title="Relatórios" description="Indicadores operacionais da clínica"/><div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><SummaryCard label="Taxa de ocupação" value="81%" note="+6% no período"/><SummaryCard label="Agendamentos" value="324" note="Últimos 30 dias"/><SummaryCard label="Faltas" value="4,2%" note="14 pacientes"/><SummaryCard label="Via agente de IA" value="92" note="28% do total"/></div><section className="panel mt-4 p-5"><h2 className="font-bold">Agendamentos por profissional</h2><div className="mt-7 space-y-5">{[["Dra. Marina Lopes",88],["Dr. Rafael Costa",72],["Dra. Ana Beatriz",61]].map(([n,v])=><div key={n as string}><div className="mb-2 flex justify-between text-sm"><span>{n}</span><b>{v} atendimentos</b></div><div className="h-3 rounded-full bg-[#edf2f4]"><div className="h-3 rounded-full bg-[var(--primary)]" style={{width:`${v}%`}}/></div></div>)}</div></section></>}
+import { PageHeader } from "@/components/page-header";
+import { SummaryCard } from "@/components/summary-card";
+export default function Relatorios() {
+  return (
+    <>
+      <PageHeader
+        title="Relatórios"
+        description="Indicadores operacionais da clínica"
+      />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryCard
+          label="Taxa de ocupação"
+          value="81%"
+          note="+6% no período"
+        />
+        <SummaryCard label="Agendamentos" value="324" note="Últimos 30 dias" />
+        <SummaryCard label="Faltas" value="4,2%" note="14 pacientes" />
+        <SummaryCard label="Via agente de IA" value="92" note="28% do total" />
+      </div>
+      <section className="panel mt-4 p-5">
+        <h2 className="font-bold">Agendamentos por profissional</h2>
+        <div className="mt-7 space-y-5">
+          {[
+            ["Dra. Marina Lopes", 88],
+            ["Dr. Rafael Costa", 72],
+            ["Dra. Ana Beatriz", 61],
+          ].map(([n, v]) => (
+            <div key={n as string}>
+              <div className="mb-2 flex justify-between text-sm">
+                <span>{n}</span>
+                <b>{v} atendimentos</b>
+              </div>
+              <div className="h-3 rounded-full bg-[#edf2f4]">
+                <div
+                  className="h-3 rounded-full bg-[var(--primary)]"
+                  style={{ width: `${v}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}

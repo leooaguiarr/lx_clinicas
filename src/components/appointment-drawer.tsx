@@ -1,4 +1,208 @@
 "use client";
-import { zodResolver } from "@hookform/resolvers/zod"; import { X } from "lucide-react"; import { useForm } from "react-hook-form"; import { z } from "zod"; import { professionals } from "@/lib/mock-data";
-const schema=z.object({patient:z.string().min(3,"Informe o paciente"),professional:z.string().min(1),procedure:z.string().min(1),careType:z.enum(["Particular","Convênio"]),date:z.string().min(1),start:z.string().min(1),end:z.string().min(1),value:z.coerce.number().min(0),notes:z.string().optional()}); type FormData=z.infer<typeof schema>;
-export function AppointmentDrawer({open,onClose,initialTime="09:00"}:{open:boolean;onClose:()=>void;initialTime?:string}){const{register,handleSubmit,watch,formState:{errors}}=useForm<FormData>({resolver:zodResolver(schema),defaultValues:{careType:"Particular",date:"2026-07-21",start:initialTime,end:"09:45",value:180}});const type=watch("careType");if(!open)return null;return <><button className="fixed inset-0 z-40 bg-[#172b3a]/25" onClick={onClose} aria-label="Fechar drawer"/><aside role="dialog" aria-modal="true" aria-labelledby="drawer-title" className="fixed inset-y-0 right-0 z-50 w-full max-w-[470px] overflow-y-auto bg-white shadow-[-8px_0_24px_rgba(23,43,58,.08)]"><header className="sticky top-0 flex items-center justify-between border-b border-[var(--border)] bg-white px-6 py-5"><div><h2 id="drawer-title" className="text-lg font-bold">Novo agendamento</h2><p className="text-xs muted">Preencha os dados do atendimento</p></div><button className="button !p-2" onClick={onClose} aria-label="Fechar"><X size={18}/></button></header><form className="space-y-4 p-6" onSubmit={handleSubmit(()=>onClose())}><label className="label">Paciente<input className="input" placeholder="Nome ou telefone" {...register("patient")}/>{errors.patient&&<span className="text-xs text-[var(--danger)]">{errors.patient.message}</span>}</label><div className="grid grid-cols-2 gap-3"><label className="label">Profissional<select className="select" {...register("professional")}><option value="">Selecione</option>{professionals.slice(1).map(p=><option key={p}>{p}</option>)}</select></label><label className="label">Procedimento<select className="select" {...register("procedure")}><option value="">Selecione</option><option>Avaliação</option><option>Limpeza</option><option>Restauração</option><option>Clareamento</option></select></label></div><fieldset><legend className="mb-2 text-xs font-semibold">Tipo de atendimento</legend><div className="grid grid-cols-2 gap-2"><label className={`button ${type==="Particular"?"!border-[var(--primary)] !bg-[#eef7f9] text-[var(--primary)]":""}`}><input type="radio" value="Particular" className="sr-only" {...register("careType")}/>Particular</label><label className={`button ${type==="Convênio"?"!border-[var(--insurance)] !bg-[#f2f0fa] text-[var(--insurance)]":""}`}><input type="radio" value="Convênio" className="sr-only" {...register("careType")}/>Convênio</label></div></fieldset>{type==="Convênio"&&<label className="label">Convênio<select className="select"><option>Unimed</option><option>Bradesco Saúde</option><option>Amil Dental</option></select></label>}<div className="grid grid-cols-3 gap-3"><label className="label">Data<input type="date" className="input" {...register("date")}/></label><label className="label">Início<input type="time" className="input" {...register("start")}/></label><label className="label">Final<input type="time" className="input" {...register("end")}/></label></div><label className="label">Valor previsto<input type="number" className="input" {...register("value")}/></label><label className="label">Observação<textarea className="input !h-24 py-2" placeholder="Informações para a recepção" {...register("notes")}/></label><div className="flex justify-end gap-2 border-t border-[var(--border)] pt-5"><button type="button" className="button" onClick={onClose}>Cancelar</button><button className="button button-primary" type="submit">Criar agendamento</button></div></form></aside></>}
+import { useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { professionals } from "@/lib/mock-data";
+import { addMinutes } from "@/lib/dates";
+const schema = z.object({
+  patient: z.string().min(3, "Informe o paciente"),
+  professional: z.string().min(1),
+  procedure: z.string().min(1),
+  careType: z.enum(["Particular", "Convênio"]),
+  date: z.string().min(1),
+  start: z.string().min(1),
+  end: z.string().min(1),
+  value: z.number().min(0, "Informe um valor válido"),
+  notes: z.string().optional(),
+});
+type FormData = z.infer<typeof schema>;
+export function AppointmentDrawer({
+  open,
+  onClose,
+  initialDate = "2026-07-21",
+  initialTime = "09:00",
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialDate?: string;
+  initialTime?: string;
+}) {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      careType: "Particular",
+      date: initialDate,
+      start: initialTime,
+      end: addMinutes(initialTime, 45),
+      value: 180,
+    },
+  });
+  useEffect(() => {
+    if (open) {
+      reset({
+        careType: "Particular",
+        date: initialDate,
+        start: initialTime,
+        end: addMinutes(initialTime, 45),
+        value: 180,
+        patient: "",
+        professional: "",
+        procedure: "",
+        notes: "",
+      });
+    }
+  }, [open, initialDate, initialTime, reset]);
+  const type = watch("careType");
+  if (!open) return null;
+  return (
+    <>
+      <button
+        className="fixed inset-0 z-40 bg-[#172b3a]/25"
+        onClick={onClose}
+        aria-label="Fechar drawer"
+      />
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="drawer-title"
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-[470px] overflow-y-auto bg-white shadow-[-8px_0_24px_rgba(23,43,58,.08)]"
+      >
+        <header className="sticky top-0 flex items-center justify-between border-b border-[var(--border)] bg-white px-6 py-5">
+          <div>
+            <h2 id="drawer-title" className="text-lg font-bold">
+              Novo agendamento
+            </h2>
+            <p className="text-xs muted">Preencha os dados do atendimento</p>
+          </div>
+          <button className="button !p-2" onClick={onClose} aria-label="Fechar">
+            <X size={18} />
+          </button>
+        </header>
+        <form
+          className="space-y-4 p-6"
+          onSubmit={handleSubmit(() => onClose())}
+        >
+          <label className="label">
+            Paciente
+            <input
+              className="input"
+              placeholder="Nome ou telefone"
+              {...register("patient")}
+            />
+            {errors.patient && (
+              <span className="text-xs text-[var(--danger)]">
+                {errors.patient.message}
+              </span>
+            )}
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="label">
+              Profissional
+              <select className="select" {...register("professional")}>
+                <option value="">Selecione</option>
+                {professionals.slice(1).map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label className="label">
+              Procedimento
+              <select className="select" {...register("procedure")}>
+                <option value="">Selecione</option>
+                <option>Avaliação</option>
+                <option>Limpeza</option>
+                <option>Restauração</option>
+                <option>Clareamento</option>
+              </select>
+            </label>
+          </div>
+          <fieldset>
+            <legend className="mb-2 text-xs font-semibold">
+              Tipo de atendimento
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              <label
+                className={`button ${type === "Particular" ? "!border-[var(--primary)] !bg-[#eef7f9] text-[var(--primary)]" : ""}`}
+              >
+                <input
+                  type="radio"
+                  value="Particular"
+                  className="sr-only"
+                  {...register("careType")}
+                />
+                Particular
+              </label>
+              <label
+                className={`button ${type === "Convênio" ? "!border-[var(--insurance)] !bg-[#f2f0fa] text-[var(--insurance)]" : ""}`}
+              >
+                <input
+                  type="radio"
+                  value="Convênio"
+                  className="sr-only"
+                  {...register("careType")}
+                />
+                Convênio
+              </label>
+            </div>
+          </fieldset>
+          {type === "Convênio" && (
+            <label className="label">
+              Convênio
+              <select className="select">
+                <option>Unimed</option>
+                <option>Bradesco Saúde</option>
+                <option>Amil Dental</option>
+              </select>
+            </label>
+          )}
+          <div className="grid grid-cols-3 gap-3">
+            <label className="label">
+              Data
+              <input type="date" className="input" {...register("date")} />
+            </label>
+            <label className="label">
+              Início
+              <input type="time" className="input" {...register("start")} />
+            </label>
+            <label className="label">
+              Final
+              <input type="time" className="input" {...register("end")} />
+            </label>
+          </div>
+          <label className="label">
+            Valor previsto
+            <input
+              type="number"
+              className="input"
+              {...register("value", { valueAsNumber: true })}
+            />
+          </label>
+          <label className="label">
+            Observação
+            <textarea
+              className="input !h-24 py-2"
+              placeholder="Informações para a recepção"
+              {...register("notes")}
+            />
+          </label>
+          <div className="flex justify-end gap-2 border-t border-[var(--border)] pt-5">
+            <button type="button" className="button" onClick={onClose}>
+              Cancelar
+            </button>
+            <button className="button button-primary" type="submit">
+              Criar agendamento
+            </button>
+          </div>
+        </form>
+      </aside>
+    </>
+  );
+}
