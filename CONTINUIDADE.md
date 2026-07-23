@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-07-23 · repositório no GitHub (privado) + API /api/v1 no ar
+> **Última atualização:** 2026-07-23 · workflows do n8n repontados para a API (em rascunho, não publicados)
 
 ---
 
@@ -61,9 +61,44 @@ npm run dev        # http://localhost:3000
 
 Login: usuário criado no Supabase Auth + vínculo em `clinic_members` (SQL em `supabase/README.md`).
 
+## 4.1 Integração n8n (estado em 2026-07-23)
+
+Instância: `https://n8nai.lexionconsultoria.tech` · pasta **Secretaria_testes** · projeto pessoal `61MxE7VS91FQbpKS`.
+
+O agente "Sofia" (Chatwoot + WhatsApp + memória Postgres + ElevenLabs) apontava para
+outro backend — uma Edge Function `porteiro` no Supabase Cloud (projeto `hlkhxukpdbniwuimlzjs`),
+chamada de "Sofia Scheduling", em estilo RPC (`{operacao: "..."}`). **Nunca chegou a funcionar**:
+os nodes estavam sem credencial anexada.
+
+Workflows repontados para `https://lx-clinicas.vercel.app/api/v1` (REST):
+
+| Workflow | ID | Mudança |
+| --- | --- | --- |
+| 01. Secretária teste | `ZMrUYS9fHNSJor52` | tools Cancelar/Buscar agendamentos → REST; nova tool `Buscar catalogo da clinica`; mapeamentos dos sub-workflows |
+| 03. Buscar janelas (API) | `vhtIWFpNNYG6KWvM` | `GET /availability`; `Split Out` → Code `Formatar janelas` (resposta é aninhada) |
+| 04. Criar agendamento (API) | `PeHuXTZLKim7d1w6` | `POST /appointments` + header `Idempotency-Key` |
+| 04.1 Atualizar agendamento (API) | `fef9s3t94RQ5OAnu` | `PATCH /appointments/:id` |
+| 09. Desmarcar e enviar alerta (API) | `aOlH971vjIHrOJMt` | `DELETE /appointments/:id?reason=` |
+
+Decisões:
+- **Profissional nunca fixo** — a clínica pode ter vários. O agente consulta `GET /catalog`,
+  e `availability` sem `professional_id` devolve todos. Os `X-Profissional-Id` hardcoded foram removidos.
+- Vocabulário pt-BR mantido nas entradas dos sub-workflows (`profissional_id`, `procedimento_id`),
+  traduzido para o inglês da API dentro do node HTTP.
+
+**Pendências desta integração:**
+1. As alterações estão em **rascunho** (`versionId` ≠ `activeVersionId`). Publicar só depois do passo 3.
+2. Gerar token em `/configuracoes/integracoes` e criar credencial **Header Auth** no n8n
+   (`Name: Authorization` / `Value: Bearer lxc_...`), anexando aos nodes HTTP dos 5 workflows.
+3. O node `Info` do workflow 01 ainda tem `profissional_id` e `tipo_consulta_id` hardcoded do
+   Sofia Scheduling — **não são mais usados**, mas convém limpar (não removi para não arriscar
+   as outras 17 atribuições do node).
+4. O system message do agente (~32k caracteres) ainda descreve o fluxo antigo de profissional
+   único — precisa ser reescrito para multi-profissional.
+
 ## 5. Próximos passos (ordem sugerida)
 
-1. **Workflow no n8n**: WhatsApp → agente → `/api/v1` (token gerado em /configuracoes/integracoes; guia de conexão em `docs/API.md`)
+1. **Finalizar n8n**: token + credencial + publicar + reescrever o system message (ver 4.1)
 2. CRUD nas telas de configurações (profissionais, procedimentos, convênios, usuários — hoje só listam)
 3. Ações de agendamento na UI da agenda (confirmar/cancelar/remarcar clicando no card)
 4. Financeiro: criar movimentação pela UI (botão existe, não faz nada)
