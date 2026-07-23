@@ -63,16 +63,16 @@ export const FINANCE_ROLES: ClinicRole[] = ["admin", "reception", "finance"];
 export const ACTIVE_APPOINTMENT_STATUSES: AppointmentStatus[] = ["scheduled", "confirmed", "completed"];
 
 /**
- * Telefone brasileiro para o formato E.164 sem "+", usado em
- * patients.normalized_phone (chave de deduplicação junto com clinic_id).
+ * Telefone brasileiro para E.164 com "+" (ex.: +5535999128432) — convenção
+ * usada em patients.normalized_phone (chave de deduplicação com clinic_id).
  */
 export function normalizePhone(input: string): string {
   const digits = input.replace(/\D/g, "");
-  if (digits.length <= 11) return `55${digits}`;
-  return digits;
+  if (digits.length <= 11) return `+55${digits}`;
+  return `+${digits}`;
 }
 
-/** "5535999128432" → "(35) 99912-8432" */
+/** "+5535999128432" → "(35) 99912-8432" */
 export function formatPhone(normalized: string | null): string {
   if (!normalized) return "—";
   const digits = normalized.replace(/\D/g, "").replace(/^55/, "");

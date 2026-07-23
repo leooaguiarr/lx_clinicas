@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { uuidSchema } from "@/lib/validation";
 import { requireSession } from "@/lib/auth/session";
 import { normalizePhone } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
@@ -12,8 +13,8 @@ const schema = z.object({
   email: z.string().email("E-mail inválido").optional().or(z.literal("")),
   cpf: z.string().optional(),
   birthDate: z.string().optional(),
-  insuranceCompanyId: z.string().uuid().optional().or(z.literal("")),
-  mainProfessionalId: z.string().uuid().optional().or(z.literal("")),
+  insuranceCompanyId: uuidSchema.optional().or(z.literal("")),
+  mainProfessionalId: uuidSchema.optional().or(z.literal("")),
   communicationConsent: z.coerce.boolean().optional(),
 });
 

@@ -2,17 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { uuidSchema } from "@/lib/validation";
 import { requireSession } from "@/lib/auth/session";
 import { zonedDateTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z
   .object({
-    patientId: z.string().uuid("Selecione o paciente"),
-    professionalId: z.string().uuid("Selecione o profissional"),
-    procedureId: z.string().uuid("Selecione o procedimento").optional().or(z.literal("")),
+    patientId: uuidSchema.describe("Selecione o paciente"),
+    professionalId: uuidSchema.describe("Selecione o profissional"),
+    procedureId: uuidSchema.describe("Selecione o procedimento").optional().or(z.literal("")),
     careType: z.enum(["private", "insurance"]),
-    insuranceCompanyId: z.string().uuid().optional().or(z.literal("")),
+    insuranceCompanyId: uuidSchema.optional().or(z.literal("")),
     date: z.string().min(1, "Informe a data"),
     start: z.string().min(1, "Informe o horário inicial"),
     end: z.string().min(1, "Informe o horário final"),

@@ -1,4 +1,6 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { dateLabel, shortDateTimeLabel } from "@/lib/dates";
 import type { ClinicRole } from "@/types/database";
 
 export async function getClinic(clinicId: string) {
@@ -86,5 +88,30 @@ export async function listMembers(clinicId: string) {
     status: member.status,
     created_at: member.created_at,
     profile: byId.get(member.user_id) ?? null,
+  }));
+}
+
+/**
+ * Tokens de integração da clínica. Usa o admin client (a tabela é gerida pelo
+ * backend); quem chama já validou a sessão via requireSession.
+ */
+export async function listIntegrationTokens(clinicId: string, timezone: string) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("integration_tokens")
+    .select("id, name, token_prefix, scopes, active, last_used_at, created_at")
+    .eq("clinic_id", clinicId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((token) => ({
+    id: token.id,
+    name: token.name,
+    token_prefix: token.token_prefix,
+    scopes: token.scopes ?? [],
+    active: token.active,
+    last_used_at: token.last_used_at,
+    created_label: dateLabel(token.created_at, timezone),
+    last_used_label: token.last_used_at ? shortDateTimeLabel(token.last_used_at, timezone) : "Nunca usado",
   }));
 }

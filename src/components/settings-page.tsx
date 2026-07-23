@@ -1,12 +1,20 @@
 import { notFound } from "next/navigation";
 import { ClinicForm } from "./clinic-form";
+import { IntegrationTokens } from "./integration-tokens";
 import { PageHeader } from "./page-header";
 import { SettingsNav } from "./settings-nav";
 import { StatusBadge } from "./status-badge";
 import { requireSession } from "@/lib/auth/session";
 import { dateLabel } from "@/lib/dates";
 import { ROLE_LABEL } from "@/lib/domain";
-import { getClinic, listInsurance, listMembers, listProcedures, listProfessionals } from "@/lib/queries/settings";
+import {
+  getClinic,
+  listInsurance,
+  listIntegrationTokens,
+  listMembers,
+  listProcedures,
+  listProfessionals,
+} from "@/lib/queries/settings";
 import { brl } from "@/lib/utils";
 
 const META: Record<string, { title: string; description: string }> = {
@@ -44,7 +52,9 @@ export async function SettingsPage({ kind }: { kind: string }) {
           {kind === "procedimentos" && <ProceduresSection clinicId={session.clinicId} />}
           {kind === "convenios" && <InsuranceSection clinicId={session.clinicId} />}
           {kind === "usuarios" && <MembersSection clinicId={session.clinicId} timezone={session.timezone} />}
-          {kind === "integracoes" && <IntegrationsSection />}
+          {kind === "integracoes" && (
+            <IntegrationsSection clinicId={session.clinicId} timezone={session.timezone} isAdmin={isAdmin} />
+          )}
         </section>
       </div>
     </>
@@ -195,31 +205,25 @@ async function MembersSection({ clinicId, timezone }: { clinicId: string; timezo
   );
 }
 
-function IntegrationsSection() {
-  const integrations = [
-    { name: "WhatsApp", detail: "Canal de atendimento da recepção" },
-    { name: "Chatwoot", detail: "Central de conversas" },
-    { name: "n8n", detail: "Automação de confirmações e lembretes" },
-    { name: "Agente de IA Lexion", detail: "Agendamento automático pela API" },
-  ];
+async function IntegrationsSection({
+  clinicId,
+  timezone,
+  isAdmin,
+}: {
+  clinicId: string;
+  timezone: string;
+  isAdmin: boolean;
+}) {
+  const tokens = await listIntegrationTokens(clinicId, timezone);
 
   return (
     <>
       <p className="mb-4 rounded-lg bg-[#f5f8fa] px-3 py-2 text-xs muted">
-        As integrações usam a API REST em <code>/api/v1</code>, que ainda será implementada.
-        Os tokens por clínica ficarão nesta tela.
+        Tokens de acesso à API <code>/api/v1</code> — use no n8n, Chatwoot e no agente de IA.
+        Cada token pertence a esta clínica e pode ser revogado a qualquer momento.
+        Endpoints e exemplos em <code>docs/API.md</code>.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {integrations.map((integration) => (
-          <div key={integration.name} className="rounded-lg border border-[var(--border)] p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{integration.name}</p>
-              <StatusBadge status="Pendente" />
-            </div>
-            <p className="mt-1 text-xs muted">{integration.detail}</p>
-          </div>
-        ))}
-      </div>
+      <IntegrationTokens tokens={tokens} canManage={isAdmin} />
     </>
   );
 }
