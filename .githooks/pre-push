@@ -9,12 +9,10 @@ while read local_ref local_sha remote_ref remote_sha; do
   # push de deleção de branch — nada a verificar
   [ "$local_sha" = "$ZERO" ] && continue
 
-  if [ "$remote_sha" = "$ZERO" ]; then
-    # branch nova no remoto: verifica os commits que ainda não estão em nenhum remoto
-    range="$local_sha --not --remotes=origin"
-  else
-    range="$remote_sha..$local_sha"
-  fi
+  # branch nova no remoto: sem base de comparação — primeira publicação passa livre
+  [ "$remote_sha" = "$ZERO" ] && continue
+
+  range="$remote_sha..$local_sha"
 
   if ! git rev-list $range -- CONTINUIDADE.md 2>/dev/null | grep -q .; then
     echo ""
