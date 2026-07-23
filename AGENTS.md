@@ -18,3 +18,7 @@
 
 4. Build de verificação: `npx tsc --noEmit` e `npm run build`.
    Deploy: `npx vercel deploy --prod --yes`.
+
+5. Este arquivo é lido nativamente pelo Antigravity (IDE principal do projeto),
+   Claude Code (via `CLAUDE.md`) e demais ferramentas que seguem o padrão AGENTS.md.
+   `GEMINI.md` aponta para cá — mantenha os três consistentes ao alterar regras.

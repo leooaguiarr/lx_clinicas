@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-07-23 · API /api/v1 pronta e no ar
+> **Última atualização:** 2026-07-23 · repositório no GitHub (privado) + API /api/v1 no ar
 
 ---
 
@@ -14,6 +14,7 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 
 | Item | Valor |
 | --- | --- |
+| Repositório | https://github.com/leooaguiarr/lx_clinicas (**privado**) |
 | App em produção | https://lx-clinicas.vercel.app |
 | Projeto Vercel | `leonardo-aguiars-projects/lx-clinicas` (deploy: `npx vercel deploy --prod --yes`) |
 | Supabase (self-hosted, Coolify) | https://supabase.lexionconsultoria.tech |
