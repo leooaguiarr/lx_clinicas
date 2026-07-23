@@ -1,0 +1,34 @@
+#!/bin/sh
+# Bloqueia o push se CONTINUIDADE.md não foi atualizado nos commits enviados.
+# Configurado automaticamente pelo "npm install" (script prepare → core.hooksPath).
+# Emergência: git push --no-verify (evite — o arquivo existe para sincronizar máquinas).
+
+ZERO=0000000000000000000000000000000000000000
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # push de deleção de branch — nada a verificar
+  [ "$local_sha" = "$ZERO" ] && continue
+
+  if [ "$remote_sha" = "$ZERO" ]; then
+    # branch nova no remoto: verifica os commits que ainda não estão em nenhum remoto
+    range="$local_sha --not --remotes=origin"
+  else
+    range="$remote_sha..$local_sha"
+  fi
+
+  if ! git rev-list $range -- CONTINUIDADE.md 2>/dev/null | grep -q .; then
+    echo ""
+    echo "✋ PUSH BLOQUEADO: CONTINUIDADE.md não foi atualizado."
+    echo ""
+    echo "   Este arquivo mantém os computadores e agentes de IA sincronizados."
+    echo "   Atualize a data, o estado e o histórico, depois:"
+    echo ""
+    echo "     git add CONTINUIDADE.md"
+    echo "     git commit --amend --no-edit   (ou um commit novo)"
+    echo "     git push"
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0
