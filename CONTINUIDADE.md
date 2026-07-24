@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-07-23 · workflows do n8n repontados para a API (em rascunho, não publicados)
+> **Última atualização:** 2026-07-23 · workflows n8n publicados; prompt do agente reescrito (falta colar)
 
 ---
 
