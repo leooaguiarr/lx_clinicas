@@ -86,15 +86,42 @@ Decisões:
 - Vocabulário pt-BR mantido nas entradas dos sub-workflows (`profissional_id`, `procedimento_id`),
   traduzido para o inglês da API dentro do node HTTP.
 
+Token criado: `n8n` (prefixo `lxc_kfBCRgaZ`), 5 escopos. Credencial n8n: **"lx clinica"**
+(`auZEd6fQMyzZjav7`, tipo Header Auth), anexada manualmente aos 7 nodes HTTP.
+
+> O MCP do n8n **não expõe credenciais** na leitura (nodes com credencial aparecem sem a chave
+> `credentials`) e **não consegue anexá-las** para auth genérica — `setNodeCredential` recusa
+> `httpHeaderAuth`. Anexar credencial nesses workflows é sempre manual, pela UI.
+
+### Limpeza aplicada no workflow 01 (2026-07-23)
+
+Tudo **desabilitado, nada removido**.
+
+- **Voz desligada, transcrição mantida**: `Calcular tipo da resposta` foi travado em `'texto'`
+  (lógica original preservada em comentário dentro do node), e os nodes `Formatar SSML`,
+  `Gravando...`, `Gerar áudio` e `Enviar áudio` estão disabled. O caminho de entrada
+  (`Download áudio → Extract from File → Convert to File → Transcrever audio`) continua ativo.
+- **Tools desabilitadas**: `Listar arquivos`, `Enviar arquivo` (Drive, fora do escopo do MVP),
+  `Enviar alerta de cancelamento` (`id_conversa_alerta` vazio no Info — falharia),
+  `Reagir mensagem` (cosmético), `Preferencia audio texto` (sem efeito sem voz).
+- **Tools ativas**: Buscar catalogo da clinica · Buscar janelas disponiveis · Criar agendamento ·
+  Atualizar agendamento · Cancelar agendamento · Buscar agendamentos do contato ·
+  Escalar humano · Refletir.
+
 **Pendências desta integração:**
-1. As alterações estão em **rascunho** (`versionId` ≠ `activeVersionId`). Publicar só depois do passo 3.
-2. Gerar token em `/configuracoes/integracoes` e criar credencial **Header Auth** no n8n
-   (`Name: Authorization` / `Value: Bearer lxc_...`), anexando aos nodes HTTP dos 5 workflows.
+1. Executar o workflow 03 manualmente (`data = YYYY-MM-DD`) para validar token + credencial ponta a ponta.
+   Confirmar depois que `integration_tokens.last_used_at` deixou de ser `null`.
+2. O system message do agente (~32k caracteres) ainda descreve o fluxo antigo de profissional
+   único — precisa ser reescrito para multi-profissional.
 3. O node `Info` do workflow 01 ainda tem `profissional_id` e `tipo_consulta_id` hardcoded do
    Sofia Scheduling — **não são mais usados**, mas convém limpar (não removi para não arriscar
    as outras 17 atribuições do node).
-4. O system message do agente (~32k caracteres) ainda descreve o fluxo antigo de profissional
-   único — precisa ser reescrito para multi-profissional.
+4. **Reativar depois que o núcleo estiver funcionando** (decidido com o cliente):
+   - `11. Agente de Lembretes de Agendamento` — precisa ser **migrado para a API do Lx Clínicas** antes
+     (hoje ainda lê do Google Calendar / backend antigo);
+   - `02. Baixar e enviar arquivo do Google Drive` — junto com as tools `Listar arquivos` e `Enviar arquivo`.
+5. Avisos de validação pré-existentes (não introduzidos por nós) nos nodes `Buscar mensagens`,
+   `Verificar status atendimento` (Postgres) e `Listar arquivos` (Drive).
 
 ## 5. Próximos passos (ordem sugerida)
 
