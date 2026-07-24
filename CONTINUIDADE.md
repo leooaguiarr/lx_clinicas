@@ -111,8 +111,11 @@ Tudo **desabilitado, nada removido**.
 **Pendências desta integração:**
 1. Executar o workflow 03 manualmente (`data = YYYY-MM-DD`) para validar token + credencial ponta a ponta.
    Confirmar depois que `integration_tokens.last_used_at` deixou de ser `null`.
-2. O system message do agente (~32k caracteres) ainda descreve o fluxo antigo de profissional
-   único — precisa ser reescrito para multi-profissional.
+2. **Prompt do agente reescrito** e versionado em `docs/prompt-agente-secretaria.md`
+   (o anterior ficou em `docs/prompt-agente-secretaria.ANTERIOR.md`). **Falta colar no n8n**:
+   workflow 01 → node `Secretária v3` → Options → System Message → substituir tudo →
+   salvar → publicar. O MCP exige enviar os 33k caracteres inline numa única chamada,
+   por isso essa etapa ficou manual.
 3. O node `Info` do workflow 01 ainda tem `profissional_id` e `tipo_consulta_id` hardcoded do
    Sofia Scheduling — **não são mais usados**, mas convém limpar (não removi para não arriscar
    as outras 17 atribuições do node).
