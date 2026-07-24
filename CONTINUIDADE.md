@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-07-23 · workflows n8n publicados; prompt do agente reescrito (falta colar)
+> **Última atualização:** 2026-07-23 · ✅ agente de IA agendando pelo WhatsApp de ponta a ponta
 
 ---
 
@@ -30,6 +30,9 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 - ✅ **Tokens por clínica** (`integration_tokens`, SHA-256): gerar/revogar em `/configuracoes/integracoes` (só admin)
 - ✅ **Deploy no Vercel** com as 3 env vars configuradas (Production + Preview)
 - ✅ Testes manuais da API contra o banco real: conflito 409, idempotência, remarcação, cancelamento, fuso
+- ✅ **Agente de IA (n8n + Chatwoot + WhatsApp) agendando de verdade** — validado em 23/07 às 21h42:
+  paciente criado automaticamente pelo telefone, consulta gravada com `source: ai_agent`,
+  auditoria registrada. Ver seção 4.1.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 
@@ -108,27 +111,47 @@ Tudo **desabilitado, nada removido**.
   Atualizar agendamento · Cancelar agendamento · Buscar agendamentos do contato ·
   Escalar humano · Refletir.
 
+### Prompt do agente
+
+Versionado em `docs/prompt-agente-secretaria.md` (v2, ~35k chars). O anterior ficou em
+`docs/prompt-agente-secretaria.ANTERIOR.md`.
+
+> **A colagem no n8n é manual**: o MCP exige enviar os 35k caracteres inline numa única
+> chamada. Caminho: workflow 01 → node `Secretária v3` → Options → System Message →
+> substituir tudo → salvar → **publicar**.
+
+Duas correções que valem lembrar:
+- O prompt **não lista os dentistas** — manda consultar `Buscar_catalogo_da_clinica`.
+  É o que faz o mesmo prompt servir para qualquer clínica.
+- A v1 fazia o agente **não se apresentar**: `"boa noite"` estava listado como sinal de
+  *despedida* na REGRA #2. A v2 acrescenta a REGRA #0 (apresentação obrigatória na primeira
+  mensagem) e ensina a desambiguar saudação × despedida pelo contexto.
+
+### Estado: FUNCIONANDO ✅
+
+Validado em 23/07/2026 21h42 por mensagem real no WhatsApp: o agente consultou a agenda,
+criou o paciente pelo telefone e gravou a consulta com `source: ai_agent`, deixando rastro
+em `audit_logs` (`patient.created` seguido de `appointment.created`).
+
 **Pendências desta integração:**
-1. Executar o workflow 03 manualmente (`data = YYYY-MM-DD`) para validar token + credencial ponta a ponta.
-   Confirmar depois que `integration_tokens.last_used_at` deixou de ser `null`.
-2. **Prompt do agente reescrito** (v2: REGRA #0 de apresentação + desambiguação de "boa noite") e versionado em `docs/prompt-agente-secretaria.md`
-   (o anterior ficou em `docs/prompt-agente-secretaria.ANTERIOR.md`). **Falta colar no n8n**:
-   workflow 01 → node `Secretária v3` → Options → System Message → substituir tudo →
-   salvar → publicar. O MCP exige enviar os 33k caracteres inline numa única chamada,
-   por isso essa etapa ficou manual.
-3. O node `Info` do workflow 01 ainda tem `profissional_id` e `tipo_consulta_id` hardcoded do
-   Sofia Scheduling — **não são mais usados**, mas convém limpar (não removi para não arriscar
-   as outras 17 atribuições do node).
-4. **Reativar depois que o núcleo estiver funcionando** (decidido com o cliente):
-   - `11. Agente de Lembretes de Agendamento` — precisa ser **migrado para a API do Lx Clínicas** antes
-     (hoje ainda lê do Google Calendar / backend antigo);
-   - `02. Baixar e enviar arquivo do Google Drive` — junto com as tools `Listar arquivos` e `Enviar arquivo`.
-5. Avisos de validação pré-existentes (não introduzidos por nós) nos nodes `Buscar mensagens`,
-   `Verificar status atendimento` (Postgres) e `Listar arquivos` (Drive).
+1. O agente gravou o agendamento **sem `procedure_id`** (o join `procedures` veio null).
+   Vale reforçar no prompt que ele pergunte o procedimento e passe o ID do catálogo —
+   é o que define a duração correta da consulta.
+2. O node `Info` do workflow 01 ainda tem `profissional_id` e `tipo_consulta_id` hardcoded
+   do Sofia Scheduling — **não são mais usados**, mas convém limpar (não removidos para não
+   arriscar as outras 17 atribuições do node).
+3. **Reativar depois** (decidido com o cliente):
+   - `11. Agente de Lembretes de Agendamento` — precisa ser **migrado para a API do Lx Clínicas**
+     antes de ligar (hoje ainda lê do Google Calendar / backend antigo);
+   - `02. Baixar e enviar arquivo do Google Drive` — junto com as tools `Listar arquivos`
+     e `Enviar arquivo`.
+4. Avisos de validação pré-existentes (não introduzidos por nós) nos nodes `Buscar mensagens`
+   e `Verificar status atendimento` (Postgres) e `Listar arquivos` (Drive).
+
 
 ## 5. Próximos passos (ordem sugerida)
 
-1. **Finalizar n8n**: token + credencial + publicar + reescrever o system message (ver 4.1)
+1. Ajustar o prompt para o agente informar o **procedimento** ao agendar (ver 4.1, pendência 1)
 2. CRUD nas telas de configurações (profissionais, procedimentos, convênios, usuários — hoje só listam)
 3. Ações de agendamento na UI da agenda (confirmar/cancelar/remarcar clicando no card)
 4. Financeiro: criar movimentação pela UI (botão existe, não faz nada)
@@ -140,4 +163,4 @@ Tudo **desabilitado, nada removido**.
 
 | Data | O que foi feito |
 | --- | --- |
-| 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração |
+| 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração → repositório privado no GitHub → workflows n8n migrados do backend antigo → prompt reescrito → **agente agendando pelo WhatsApp** |
