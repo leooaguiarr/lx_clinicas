@@ -1,6 +1,7 @@
 import { fail, ok } from "@/lib/api/http";
 import { authenticateRequest } from "@/lib/api/tokens";
 import { getClinicSettings } from "@/lib/api/appointments";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -36,7 +37,9 @@ export async function GET(request: Request) {
       .order("name"),
   ]);
 
-  if (professionals.error || procedures.error || insuranceCompanies.error) {
+  const failed = professionals.error ?? procedures.error ?? insuranceCompanies.error;
+  if (failed) {
+    logError("api.catalog.GET", failed, { clinicId });
     return fail(500, "query_error", "Falha ao consultar o catálogo.");
   }
 

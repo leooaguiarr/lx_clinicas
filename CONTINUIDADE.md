@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-07-23 · ✅ agente de IA agendando pelo WhatsApp de ponta a ponta
+> **Última atualização:** 2026-08-07 · log de erros no servidor e agenda com grade dinâmica
 
 ---
 
@@ -33,6 +33,12 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 - ✅ **Agente de IA (n8n + Chatwoot + WhatsApp) agendando de verdade** — validado em 23/07 às 21h42:
   paciente criado automaticamente pelo telefone, consulta gravada com `source: ai_agent`,
   auditoria registrada. Ver seção 4.1.
+- ✅ **Log de erros no servidor** (`src/lib/logger.ts`): uma linha JSON por evento nos logs da
+  Vercel, em todas as rotas `/api/v1` e server actions. As mensagens devolvidas continuam
+  genéricas; o motivo real deixou de se perder.
+- ✅ **Agenda com grade dinâmica**: as horas exibidas vêm de `professional_schedules` e se
+  esticam para cobrir qualquer agendamento fora do expediente; sábado/domingo aparecem quando
+  há expediente ou algo marcado; atendimentos simultâneos ficam lado a lado.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 
@@ -44,7 +50,9 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 6. Banco em UTC; exibição no fuso da clínica via `src/lib/dates.ts`. Na API, aceitar `date`+`time` (fuso da clínica) ou ISO com offset; ISO sem fuso é rejeitado.
 7. `financial_transactions.amount` é sempre positivo; o sinal vem de `type` (`income|expense`).
 8. Next 16: `src/middleware.ts` foi renomeado para `src/proxy.ts` (convenção nova). O matcher EXCLUI `/api` (a API autentica por token próprio).
-9. `professional_schedules` foi populada por nós (seg–sex 08:00–18:00, 30 min, 3 profissionais) — ajustar quando a clínica definir horários reais.
+9. `professional_schedules` foi populada por nós (seg–sex 08:00–18:00, 30 min, 3 profissionais) — ajustar quando a clínica definir horários reais. A agenda **lê essa tabela** para montar a grade: mudar os horários lá muda o que a tela mostra.
+10. A grade da agenda tem linhas de 30 min, mas os cards são posicionados **por minuto** (`startMinutes`), então um horário quebrado como 08:20 aparece no lugar certo. A lógica pura está em `src/lib/agenda-layout.ts`, separada das queries justamente para ser testável.
+11. `GET /availability` agora responde **500 se qualquer uma das consultas falhar**. É proposital: devolver a lista parcial fazia o agente oferecer horário já ocupado.
 
 ## 4. Configurar um computador novo
 
@@ -151,16 +159,36 @@ em `audit_logs` (`patient.created` seguido de `appointment.created`).
 
 ## 5. Próximos passos (ordem sugerida)
 
-1. Ajustar o prompt para o agente informar o **procedimento** ao agendar (ver 4.1, pendência 1)
-2. CRUD nas telas de configurações (profissionais, procedimentos, convênios, usuários — hoje só listam)
-3. Ações de agendamento na UI da agenda (confirmar/cancelar/remarcar clicando no card)
-4. Financeiro: criar movimentação pela UI (botão existe, não faz nada)
-5. Perfil do paciente: abas Financeiro/Documentos/Histórico (Storage pendente)
-6. Rotacionar as chaves demo do Supabase (validade de 100 anos) antes de clínica real
-7. Rate limit na API `/api/v1` (spec, seção 18)
+A ordem prioriza **confiabilidade do que já está no ar** antes de superfície nova — há um
+agente autônomo escrevendo no banco em produção.
+
+1. **Ações de agendamento na UI da agenda** (confirmar/cancelar/remarcar clicando no card).
+   `updateAppointmentStatus` em `src/lib/actions/appointments.ts` já existe, mas está **sem uso
+   e sem validação** (recebe `string` e faz `status as never`) — tipar com `z.enum` ao ligar.
+2. **Testes das funções puras**: `zonedDateTime`, `weekOf`, `resolveInstant`, `normalizePhone`
+   e `src/lib/agenda-layout.ts`. Não há infra de teste no projeto ainda.
+3. Ajustar o prompt para o agente informar o **procedimento** ao agendar (ver 4.1, pendência 1)
+4. CRUD nas telas de configurações (profissionais, procedimentos, convênios, usuários — hoje só listam)
+5. Financeiro: criar movimentação pela UI (botão existe, não faz nada)
+6. Perfil do paciente: abas Financeiro/Documentos/Histórico (Storage pendente)
+7. Rotacionar as chaves demo do Supabase (validade de 100 anos) antes de clínica real
+8. Rate limit na API `/api/v1` (spec, seção 18)
+
+### Dívidas conhecidas (revisão de 07/08)
+
+- **Papéis não são checados nas escritas**: `createPatient` e `createAppointment` só chamam
+  `requireSession()`. `updateClinic` e os tokens checam `admin`. A RLS pode cobrir — falta
+  confirmar as policies e alinhar os dois casos.
+- `normalizePhone` prefixa `+55` em qualquer entrada com até 11 dígitos: um telefone sem DDD
+  vira E.164 inválido e cria paciente duplicado. Falta exigir 10 ou 11 dígitos.
+- `authenticateRequest` grava `last_used_at` a **cada** request — uma escrita por chamada do
+  agente. Vale só atualizar se o último uso for mais velho que alguns minutos.
+- `DEFAULT_SCOPES` concede os 5 escopos sempre; a UI não permite escolher.
+- `tsconfig.tsbuildinfo` está rastreado no git e deveria estar no `.gitignore`.
 
 ## 6. Histórico resumido
 
 | Data | O que foi feito |
 | --- | --- |
 | 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração → repositório privado no GitHub → workflows n8n migrados do backend antigo → prompt reescrito → **agente agendando pelo WhatsApp** |
+| 2026-08-07 | Revisão do código: log de erros no servidor (antes não havia nenhum) e correção da agenda, que escondia sem aviso os atendimentos fora de 08:00–18:00/seg–sex e empilhava cards simultâneos um sobre o outro |

@@ -8,18 +8,33 @@
 
 export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
+/**
+ * Construir um Intl.DateTimeFormat é caro e estas funções são chamadas em laço
+ * (um slot de agenda por vez). O cache é por fuso — a clínica só tem um.
+ */
+const offsetFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function offsetFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = offsetFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    offsetFormatters.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 /** Diferença entre o horário local do fuso e o UTC, em milissegundos. */
 function timeZoneOffsetMs(instant: Date, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
+  const parts = offsetFormatter(timeZone)
     .formatToParts(instant)
     .reduce<Record<string, string>>((acc, part) => {
       if (part.type !== "literal") acc[part.type] = part.value;
@@ -85,18 +100,20 @@ export function longDateLabel(instant: Date, timeZone = DEFAULT_TIMEZONE): strin
 export type Week = {
   /** Segunda-feira 00:00 no fuso da clínica. */
   start: Date;
-  /** Sábado 00:00 — limite superior exclusivo da grade (seg–sex). */
+  /** Domingo 23:59 — limite superior da semana. */
   end: Date;
-  /** As cinco datas úteis, em "2026-07-23". */
+  /** As sete datas, de segunda a domingo, em "2026-07-23". */
   days: string[];
-  /** "20–24 de julho" */
-  label: string;
 };
 
 /**
- * Semana útil (seg–sex) que contém `reference`, deslocada por `weekOffset`.
+ * Semana (seg–dom) que contém `reference`, deslocada por `weekOffset`.
+ *
+ * São sete dias de propósito: a agenda decide quais colunas exibir a partir do
+ * expediente real da clínica. Fixar seg–sex aqui escondia atendimentos de
+ * sábado sem nenhum aviso na tela.
  */
-export function workWeek(reference: Date, timeZone = DEFAULT_TIMEZONE, weekOffset = 0): Week {
+export function weekOf(reference: Date, timeZone = DEFAULT_TIMEZONE, weekOffset = 0): Week {
   const key = dateKey(reference, timeZone);
   const [year, month, day] = key.split("-").map(Number);
 
@@ -106,19 +123,40 @@ export function workWeek(reference: Date, timeZone = DEFAULT_TIMEZONE, weekOffse
   const daysSinceMonday = (weekday + 6) % 7;
   local.setUTCDate(local.getUTCDate() - daysSinceMonday + weekOffset * 7);
 
-  const days = Array.from({ length: 5 }, (_, index) => {
+  const days = Array.from({ length: 7 }, (_, index) => {
     const item = new Date(local);
     item.setUTCDate(item.getUTCDate() + index);
     return item.toISOString().slice(0, 10);
   });
 
-  const start = zonedDateTime(days[0], "00:00", timeZone);
-  const end = zonedDateTime(days[4], "23:59", timeZone);
+  return {
+    start: zonedDateTime(days[0], "00:00", timeZone),
+    end: zonedDateTime(days[6], "23:59", timeZone),
+    days,
+  };
+}
 
-  const formatter = new Intl.DateTimeFormat("pt-BR", { timeZone, day: "numeric", month: "long" });
-  const label = `${new Intl.DateTimeFormat("pt-BR", { timeZone, day: "numeric" }).format(start)}–${formatter.format(end)}`;
+/** "20–24 de julho" ou "28 de julho–1 de agosto" para o intervalo exibido. */
+export function daysRangeLabel(days: string[], timeZone = DEFAULT_TIMEZONE): string {
+  if (days.length === 0) return "";
 
-  return { start, end, days, label };
+  const first = zonedDateTime(days[0], "12:00", timeZone);
+  const last = zonedDateTime(days[days.length - 1], "12:00", timeZone);
+  const withMonth = new Intl.DateTimeFormat("pt-BR", { timeZone, day: "numeric", month: "long" });
+
+  if (days[0] === days[days.length - 1]) return withMonth.format(first);
+
+  const sameMonth = days[0].slice(0, 7) === days[days.length - 1].slice(0, 7);
+  const start = sameMonth
+    ? new Intl.DateTimeFormat("pt-BR", { timeZone, day: "numeric" }).format(first)
+    : withMonth.format(first);
+
+  return `${start}–${withMonth.format(last)}`;
+}
+
+/** Dia da semana da data-calendário (0 = domingo), independente de fuso. */
+export function weekdayOf(date: string): number {
+  return new Date(`${date}T12:00:00Z`).getUTCDay();
 }
 
 /** "Seg 20" — cabeçalho de coluna da agenda. */

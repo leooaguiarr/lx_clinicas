@@ -3,8 +3,9 @@ import { uuidSchema } from "@/lib/validation";
 import { getClinicSettings } from "@/lib/api/appointments";
 import { fail, failFromZod, ok } from "@/lib/api/http";
 import { authenticateRequest } from "@/lib/api/tokens";
-import { zonedDateTime } from "@/lib/dates";
+import { weekdayOf, zonedDateTime } from "@/lib/dates";
 import { ACTIVE_APPOINTMENT_STATUSES } from "@/lib/domain";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const querySchema = z.object({
@@ -29,11 +30,6 @@ function addDays(date: string, amount: number): string {
   const base = new Date(`${date}T12:00:00Z`);
   base.setUTCDate(base.getUTCDate() + amount);
   return base.toISOString().slice(0, 10);
-}
-
-/** Dia da semana da data-calendário (0 = domingo), independente de fuso. */
-function weekdayOf(date: string): number {
-  return new Date(`${date}T12:00:00Z`).getUTCDay();
 }
 
 /**
@@ -88,7 +84,23 @@ export async function GET(request: Request) {
       : Promise.resolve({ data: null }),
   ]);
 
-  if (professionalsResult.error) return fail(500, "query_error", "Falha ao consultar profissionais.");
+  /*
+   * Nenhuma dessas consultas pode falhar em silêncio: sem os horários a resposta
+   * seria "não há vaga"; sem os agendamentos ou bloqueios, seria "está tudo livre"
+   * e o agente ofereceria horário ocupado. Errar alto é melhor que mentir.
+   */
+  for (const [name, result] of [
+    ["professionals", professionalsResult],
+    ["schedules", schedulesResult],
+    ["appointments", appointmentsResult],
+    ["blocks", blocksResult],
+  ] as const) {
+    if (result.error) {
+      logError("api.availability.GET", result.error, { clinicId, query: name, date, days });
+      return fail(500, "query_error", "Falha ao consultar a disponibilidade.");
+    }
+  }
+
   const professionals = professionalsResult.data ?? [];
   if (professional_id && professionals.length === 0) {
     return fail(404, "professional_not_found", "Profissional não encontrado nesta clínica.");

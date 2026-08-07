@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export function ok(data: unknown, status = 200) {
@@ -18,7 +19,10 @@ export function failFromZod(error: ZodError) {
   return fail(422, "validation_error", path ? `${path}: ${issue.message}` : issue.message);
 }
 
-/** Registro em audit_logs. Erros são engolidos — auditoria não derruba a operação. */
+/**
+ * Registro em audit_logs. A falha não derruba a operação — mas vai para o log,
+ * senão a auditoria pode parar de gravar sem ninguém perceber.
+ */
 export async function logAudit(
   clinicId: string,
   action: string,
@@ -28,17 +32,16 @@ export async function logAudit(
   oldData: unknown = null,
 ) {
   const admin = createAdminClient();
-  await admin
-    .from("audit_logs")
-    .insert({
-      clinic_id: clinicId,
-      user_id: null,
-      action,
-      entity_type: entityType,
-      entity_id: entityId,
-      new_data: newData,
-      old_data: oldData,
-      ip_address: null,
-    })
-    .then(() => undefined, () => undefined);
+  const { error } = await admin.from("audit_logs").insert({
+    clinic_id: clinicId,
+    user_id: null,
+    action,
+    entity_type: entityType,
+    entity_id: entityId,
+    new_data: newData,
+    old_data: oldData,
+    ip_address: null,
+  });
+
+  if (error) logError("api.audit", error, { clinicId, action, entityType, entityId });
 }

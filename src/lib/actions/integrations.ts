@@ -5,6 +5,7 @@ import { z } from "zod";
 import { uuidSchema } from "@/lib/validation";
 import { requireSession } from "@/lib/auth/session";
 import { DEFAULT_SCOPES, generateToken } from "@/lib/api/tokens";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -52,6 +53,7 @@ export async function createIntegrationToken(
   });
 
   if (error) {
+    logError("action.createIntegrationToken", error, { clinicId: session.clinicId, userId: session.userId });
     return { error: "Não foi possível criar o token. Tente novamente." };
   }
 
@@ -67,11 +69,14 @@ export async function revokeIntegrationToken(formData: FormData) {
   if (typeof id !== "string" || !uuidSchema.safeParse(id).success) return;
 
   const admin = createAdminClient();
-  await admin
+  const { error } = await admin
     .from("integration_tokens")
     .update({ active: false, revoked_at: new Date().toISOString() })
     .eq("clinic_id", session.clinicId)
     .eq("id", id);
+
+  // Revogação que falha calada deixa um token ativo que o admin acha que matou.
+  if (error) logError("action.revokeIntegrationToken", error, { clinicId: session.clinicId, tokenId: id });
 
   revalidatePath("/configuracoes/integracoes");
 }

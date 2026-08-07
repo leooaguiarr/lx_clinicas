@@ -3,6 +3,7 @@ import { uuidSchema } from "@/lib/validation";
 import { fail, failFromZod, logAudit, ok } from "@/lib/api/http";
 import { authenticateRequest } from "@/lib/api/tokens";
 import { formatPhone, normalizePhone } from "@/lib/domain";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const PATIENT_SELECT =
@@ -67,7 +68,10 @@ export async function GET(request: Request) {
   else if (input.q) query = query.ilike("full_name", `%${input.q}%`).order("full_name");
 
   const { data, error } = await query;
-  if (error) return fail(500, "query_error", "Falha ao consultar pacientes.");
+  if (error) {
+    logError("api.patients.GET", error, { clinicId: auth.auth.clinicId, by: input.phone ? "phone" : "name" });
+    return fail(500, "query_error", "Falha ao consultar pacientes.");
+  }
   return ok((data ?? []).map(serializePatient));
 }
 
@@ -136,6 +140,7 @@ export async function POST(request: Request) {
         .maybeSingle();
       if (existing) return ok({ created: false, patient: serializePatient(existing) });
     }
+    logError("api.patients.POST", error, { clinicId, source: input.source });
     return fail(500, "create_failed", "Não foi possível cadastrar o paciente.");
   }
 

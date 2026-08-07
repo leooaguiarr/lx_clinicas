@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
+import { logError } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -57,6 +58,9 @@ export async function authenticateRequest(request: Request, requiredScope: strin
     .maybeSingle();
 
   if (error || !row || !row.active || row.revoked_at) {
+    // Token errado é 401 normal; falha de consulta é problema nosso e precisa
+    // aparecer — senão o banco fora do ar vira "credencial inválida" no n8n.
+    if (error) logError("api.auth", error, { step: "token_lookup" });
     return { ok: false, status: 401, code: "invalid_token", message: "Token inválido ou revogado." };
   }
 

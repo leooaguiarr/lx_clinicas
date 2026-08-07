@@ -5,6 +5,7 @@ import { z } from "zod";
 import { uuidSchema } from "@/lib/validation";
 import { requireSession } from "@/lib/auth/session";
 import { normalizePhone } from "@/lib/domain";
+import { logError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -68,6 +69,7 @@ export async function createPatient(
     if (error.code === "23505") {
       return { error: "Já existe um paciente com esse telefone nesta clínica." };
     }
+    logError("action.createPatient", error, { clinicId: session.clinicId, userId: session.userId });
     return { error: "Não foi possível cadastrar o paciente. Tente novamente." };
   }
 

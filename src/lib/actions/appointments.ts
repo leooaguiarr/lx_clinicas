@@ -5,6 +5,7 @@ import { z } from "zod";
 import { uuidSchema } from "@/lib/validation";
 import { requireSession } from "@/lib/auth/session";
 import { zonedDateTime } from "@/lib/dates";
+import { logError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z
@@ -78,6 +79,12 @@ export async function createAppointment(
     if (error.code === "23P01") {
       return { error: "Esse profissional já tem atendimento nesse horário." };
     }
+    logError("action.createAppointment", error, {
+      clinicId: session.clinicId,
+      userId: session.userId,
+      professionalId: input.professionalId,
+      date: input.date,
+    });
     return { error: "Não foi possível criar o agendamento. Tente novamente." };
   }
 

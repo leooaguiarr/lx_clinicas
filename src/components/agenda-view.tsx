@@ -9,15 +9,11 @@ import { SummaryCard } from "./summary-card";
 import { brl } from "@/lib/utils";
 import type { AgendaData } from "@/lib/queries/agenda";
 
-const SLOT_MINUTES = 30;
-const FIRST_SLOT_MINUTES = 8 * 60;
-const SLOT_COUNT = 20;
+/** Altura de uma linha da grade, em rem. Tudo é posicionado em múltiplos dela. */
 const ROW_HEIGHT_REM = 3;
-
-const slots = Array.from({ length: SLOT_COUNT }, (_, index) => {
-  const total = FIRST_SLOT_MINUTES + index * SLOT_MINUTES;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-});
+/** Largura mínima de uma coluna de dia — abaixo disso a grade rola na horizontal. */
+const MIN_DAY_WIDTH = 150;
+const GUTTER_WIDTH = 64;
 
 const CARE_TYPE_TABS = [
   { value: "", label: "Todos" },
@@ -25,22 +21,23 @@ const CARE_TYPE_TABS = [
   { value: "insurance", label: "Convênio" },
 ] as const;
 
-/** Encaixa um horário arbitrário no slot de 30 minutos que o contém. */
-function slotFor(time: string) {
-  const [hour, minute] = time.split(":").map(Number);
-  const index = Math.floor((hour * 60 + minute - FIRST_SLOT_MINUTES) / SLOT_MINUTES);
-  return index >= 0 && index < SLOT_COUNT ? slots[index] : null;
-}
-
 export function AgendaView({ data, catalogs }: { data: AgendaData; catalogs: SchedulingCatalogs }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [drawer, setDrawer] = useState(false);
-  const [selected, setSelected] = useState({ date: data.days[0].date, time: "09:00" });
+  const [selected, setSelected] = useState({ date: data.days[0].date, time: data.grid.slots[0] });
 
   const careType = searchParams.get("tipo") ?? "";
   const professionalId = searchParams.get("profissional") ?? "";
+
+  const { grid, days } = data;
+  const columns = `${GUTTER_WIDTH}px repeat(${days.length}, minmax(0, 1fr))`;
+  const minWidth = GUTTER_WIDTH + days.length * MIN_DAY_WIDTH;
+
+  /** Posição vertical de um horário, em rem, relativa ao topo da grade. */
+  const offsetRem = (startMinutes: number) =>
+    ((startMinutes - grid.startMinutes) / grid.slotMinutes) * ROW_HEIGHT_REM;
 
   function setParam(updates: Record<string, string>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -56,21 +53,13 @@ export function AgendaView({ data, catalogs }: { data: AgendaData; catalogs: Sch
     setDrawer(true);
   }
 
-  const positioned = data.appointments
-    .map((item) => ({ ...item, slot: slotFor(item.start) }))
-    .filter((item) => item.slot !== null);
-
-  const blocks = data.blocks
-    .map((item) => ({ ...item, slot: slotFor(item.start) }))
-    .filter((item) => item.slot !== null);
-
   return (
     <>
       <PageHeader
         title="Agenda"
         description={`Semana de ${data.weekLabel}`}
         action={
-          <button className="button button-primary" onClick={() => openDrawer(data.days[0].date, "09:00")}>
+          <button className="button button-primary" onClick={() => openDrawer(days[0].date, grid.slots[0])}>
             <Plus size={17} />
             Novo agendamento
           </button>
@@ -118,60 +107,97 @@ export function AgendaView({ data, catalogs }: { data: AgendaData; catalogs: Sch
         </div>
 
         <div className="overflow-auto">
-          <div className="min-w-[850px] grid grid-cols-[64px_repeat(5,1fr)]">
-            <div className="h-12 border-b border-r border-[var(--border)]" />
-            {data.days.map((day) => (
-              <div
-                key={day.date}
-                className={`grid h-12 place-items-center border-b border-r border-[var(--border)] text-xs font-semibold ${day.isToday ? "bg-[#eef7f9] text-[var(--primary)]" : ""}`}
-              >
-                {day.label}
-              </div>
-            ))}
+          <div style={{ minWidth }}>
+            <div className="grid" style={{ gridTemplateColumns: columns }}>
+              <div className="h-12 border-b border-r border-[var(--border)]" />
+              {days.map((day) => (
+                <div
+                  key={day.date}
+                  className={`grid h-12 place-items-center border-b border-r border-[var(--border)] text-xs font-semibold ${day.isToday ? "bg-[#eef7f9] text-[var(--primary)]" : ""}`}
+                >
+                  {day.label}
+                </div>
+              ))}
+            </div>
 
-            {slots.map((time) => (
-              <div className="contents" key={time}>
-                <div className="h-12 border-b border-r border-[var(--border)] pr-2 pt-1 text-right text-[10px] muted">{time}</div>
-                {data.days.map((day, dayIndex) => (
-                  <button
-                    key={day.date}
-                    className="relative h-12 border-b border-r border-[var(--border)] bg-white hover:bg-[#f3f9fa]"
-                    onClick={() => openDrawer(day.date, time)}
-                    aria-label={`Agendar ${day.label} às ${time}`}
-                  >
-                    {blocks
-                      .filter((block) => block.dayIndex === dayIndex && block.slot === time)
+            <div className="relative">
+              {/* Fundo: linhas da grade e alvos de clique para abrir o formulário. */}
+              <div className="grid" style={{ gridTemplateColumns: columns }}>
+                {grid.slots.map((time) => (
+                  <div className="contents" key={time}>
+                    <div
+                      className="border-b border-r border-[var(--border)] pr-2 pt-1 text-right text-[10px] muted"
+                      style={{ height: `${ROW_HEIGHT_REM}rem` }}
+                    >
+                      {time}
+                    </div>
+                    {days.map((day) => (
+                      <button
+                        key={day.date}
+                        className="border-b border-r border-[var(--border)] bg-white hover:bg-[#f3f9fa]"
+                        style={{ height: `${ROW_HEIGHT_REM}rem` }}
+                        onClick={() => openDrawer(day.date, time)}
+                        aria-label={`Agendar ${day.label} às ${time}`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {/*
+                Camada dos atendimentos, sobreposta à grade e alinhada nas mesmas
+                colunas. Posicionar por minuto (e não por célula) faz um horário
+                quebrado como 08:20 aparecer no lugar certo, em vez de sumir.
+              */}
+              <div
+                className="pointer-events-none absolute inset-0 grid"
+                style={{ gridTemplateColumns: columns }}
+                aria-hidden
+              >
+                <div />
+                {days.map((day, dayIndex) => (
+                  <div className="relative" key={day.date}>
+                    {data.blocks
+                      .filter((block) => block.dayIndex === dayIndex)
                       .map((block) => (
                         <span
                           key={block.id}
-                          className="absolute inset-x-1 top-1 z-10 grid place-items-center rounded bg-[#f1f3f4] text-[10px] muted"
-                          style={{ height: `calc(${block.slots} * ${ROW_HEIGHT_REM}rem - 0.5rem)` }}
+                          className="absolute inset-x-1 z-10 grid place-items-center overflow-hidden rounded bg-[#f1f3f4] text-[10px] muted"
+                          style={{
+                            top: `calc(${offsetRem(block.startMinutes)}rem + 0.25rem)`,
+                            height: `calc(${(block.durationMinutes / grid.slotMinutes) * ROW_HEIGHT_REM}rem - 0.5rem)`,
+                          }}
                         >
                           Bloqueado • {block.reason}
                         </span>
                       ))}
-                    {positioned
-                      .filter((item) => item.dayIndex === dayIndex && item.slot === time)
+                    {data.appointments
+                      .filter((item) => item.dayIndex === dayIndex)
                       .map((item) => (
                         <span
                           key={item.id}
-                          className={`absolute inset-x-1 top-1 z-20 overflow-hidden rounded border-l-[3px] p-1 text-left text-[10px] leading-tight ${
+                          className={`absolute z-20 overflow-hidden rounded border-l-[3px] p-1 text-left text-[10px] leading-tight ${
                             item.status === "cancelled" || item.status === "no_show"
                               ? "border-l-[var(--danger)] bg-[#fdf0f1] opacity-70"
                               : item.careType === "private"
                                 ? "border-l-[var(--private)] bg-[#eaf4f6]"
                                 : "border-l-[var(--insurance)] bg-[#f0eef8]"
                           }`}
-                          style={{ height: `calc(${item.slots} * ${ROW_HEIGHT_REM}rem - 0.5rem)` }}
+                          style={{
+                            top: `calc(${offsetRem(item.startMinutes)}rem + 0.25rem)`,
+                            height: `calc(${(item.durationMinutes / grid.slotMinutes) * ROW_HEIGHT_REM}rem - 0.5rem)`,
+                            left: `calc(${(item.column / item.columnCount) * 100}% + 0.25rem)`,
+                            width: `calc(${100 / item.columnCount}% - 0.5rem)`,
+                          }}
                         >
-                          <b className="block truncate">{item.patient}</b>
+                          <b className="block truncate">{item.start} {item.patient}</b>
                           <span className="block truncate opacity-70">{item.procedure} · {item.statusLabel}</span>
                         </span>
                       ))}
-                  </button>
+                  </div>
                 ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>

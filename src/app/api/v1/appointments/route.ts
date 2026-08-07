@@ -10,6 +10,7 @@ import {
 import { fail, failFromZod, logAudit, ok } from "@/lib/api/http";
 import { authenticateRequest } from "@/lib/api/tokens";
 import { normalizePhone } from "@/lib/domain";
+import { logError, logWarn } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const listSchema = z.object({
@@ -69,7 +70,10 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await query;
-  if (error) return fail(500, "query_error", "Falha ao consultar agendamentos.");
+  if (error) {
+    logError("api.appointments.GET", error, { clinicId, filters: input });
+    return fail(500, "query_error", "Falha ao consultar agendamentos.");
+  }
   return ok((data ?? []).map(serializeAppointment));
 }
 
@@ -154,7 +158,14 @@ export async function POST(request: Request) {
         })
         .select("id")
         .single();
-      if (createError || !created) return fail(500, "patient_create_failed", "Não foi possível cadastrar o paciente.");
+      if (createError || !created) {
+        logError("api.appointments.POST", createError ?? "insert sem retorno", {
+          clinicId,
+          step: "patient_create",
+          source: input.source,
+        });
+        return fail(500, "patient_create_failed", "Não foi possível cadastrar o paciente.");
+      }
       patientId = created.id;
       await logAudit(clinicId, "patient.created", "patient", created.id, { via: "api", source: input.source });
     } else {
@@ -197,7 +208,17 @@ export async function POST(request: Request) {
   const end = new Date(start.getTime() + (duration ?? defaultMinutes) * 60000);
 
   const conflict = await checkConflicts(clinicId, input.professional_id, start, end);
-  if (conflict.conflict) return fail(409, `conflict_${conflict.reason}`, conflict.detail);
+  if (conflict.conflict) {
+    // Esperado (o agente tenta um horário ocupado), mas o volume indica prompt ou
+    // availability desalinhados — por isso fica registrado.
+    logWarn("api.appointments.POST", "conflito de horário", {
+      clinicId,
+      professionalId: input.professional_id,
+      startAt: start.toISOString(),
+      reason: conflict.reason,
+    });
+    return fail(409, `conflict_${conflict.reason}`, conflict.detail);
+  }
 
   const { data: created, error } = await admin
     .from("appointments")
@@ -219,6 +240,13 @@ export async function POST(request: Request) {
     .single();
 
   if (error || !created) {
+    logError("api.appointments.POST", error ?? "insert sem retorno", {
+      clinicId,
+      patientId,
+      professionalId: input.professional_id,
+      startAt: start.toISOString(),
+      source: input.source,
+    });
     return fail(500, "create_failed", "Não foi possível criar o agendamento.");
   }
 

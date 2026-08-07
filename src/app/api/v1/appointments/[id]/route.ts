@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/appointments";
 import { fail, failFromZod, logAudit, ok } from "@/lib/api/http";
 import { authenticateRequest } from "@/lib/api/tokens";
+import { logError, logWarn } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Context = { params: Promise<{ id: string }> };
@@ -100,7 +101,16 @@ export async function PATCH(request: Request, context: Context) {
     const professionalId = input.professional_id ?? current.professional_id;
 
     const conflict = await checkConflicts(clinicId, professionalId, start, end, id);
-    if (conflict.conflict) return fail(409, `conflict_${conflict.reason}`, conflict.detail);
+    if (conflict.conflict) {
+      logWarn("api.appointments.PATCH", "conflito ao remarcar", {
+        clinicId,
+        appointmentId: id,
+        professionalId,
+        startAt: start.toISOString(),
+        reason: conflict.reason,
+      });
+      return fail(409, `conflict_${conflict.reason}`, conflict.detail);
+    }
 
     updates.start_at = start.toISOString();
     updates.end_at = end.toISOString();
@@ -131,7 +141,14 @@ export async function PATCH(request: Request, context: Context) {
     .select(APPOINTMENT_SELECT)
     .single();
 
-  if (error || !updated) return fail(500, "update_failed", "Não foi possível atualizar o agendamento.");
+  if (error || !updated) {
+    logError("api.appointments.PATCH", error ?? "update sem retorno", {
+      clinicId,
+      appointmentId: id,
+      fields: Object.keys(updates),
+    });
+    return fail(500, "update_failed", "Não foi possível atualizar o agendamento.");
+  }
 
   const serialized = serializeAppointment(updated);
   await logAudit(clinicId, "appointment.updated", "appointment", id, serialized, {
@@ -176,7 +193,10 @@ export async function DELETE(request: Request, context: Context) {
     .select(APPOINTMENT_SELECT)
     .single();
 
-  if (error || !updated) return fail(500, "cancel_failed", "Não foi possível cancelar o agendamento.");
+  if (error || !updated) {
+    logError("api.appointments.DELETE", error ?? "update sem retorno", { clinicId, appointmentId: id });
+    return fail(500, "cancel_failed", "Não foi possível cancelar o agendamento.");
+  }
 
   const serialized = serializeAppointment(updated);
   await logAudit(clinicId, "appointment.cancelled", "appointment", id, serialized, { status: current.status });

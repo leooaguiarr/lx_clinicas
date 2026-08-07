@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
+import { logError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 const clinicSchema = z.object({
@@ -52,6 +53,7 @@ export async function updateClinic(
     .eq("id", session.clinicId);
 
   if (error) {
+    logError("action.updateClinic", error, { clinicId: session.clinicId, userId: session.userId });
     return { error: "Não foi possível salvar as alterações." };
   }
 
