@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-07 · log de erros no servidor e agenda com grade dinâmica
+> **Última atualização:** 2026-08-09 · menu lateral colapsável no desktop
 
 ---
 
@@ -192,3 +192,4 @@ agente autônomo escrevendo no banco em produção.
 | --- | --- |
 | 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração → repositório privado no GitHub → workflows n8n migrados do backend antigo → prompt reescrito → **agente agendando pelo WhatsApp** |
 | 2026-08-07 | Revisão do código: log de erros no servidor (antes não havia nenhum) e correção da agenda, que escondia sem aviso os atendimentos fora de 08:00–18:00/seg–sex e empilhava cards simultâneos um sobre o outro |
+| 2026-08-09 | Ajuste no `app-shell`: botão de menu agora funciona no desktop, permitindo ocultar a barra lateral e usar a largura total da tela. |

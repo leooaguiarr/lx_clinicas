@@ -19,14 +19,15 @@ const nav = [
 export function AppShell({ session, today, children }: { session: SessionContext; today: string; children: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const [desktopClosed, setDesktopClosed] = useState(false);
   const [menu, setMenu] = useState(false);
 
   // O profissional não enxerga o financeiro (seção 5.3 da SPEC).
   const items = FINANCE_ROLES.includes(session.role) ? nav : nav.filter((item) => item.href !== "/financeiro");
 
   return (
-    <div className="min-h-screen lg:pl-[236px]">
-      <aside className={`fixed inset-y-0 left-0 z-40 w-[236px] border-r border-[var(--border)] bg-white p-4 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+    <div className={`min-h-screen transition-all duration-300 ${desktopClosed ? "lg:pl-0" : "lg:pl-[236px]"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-[236px] border-r border-[var(--border)] bg-white p-4 transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} ${desktopClosed ? "lg:-translate-x-full" : "lg:translate-x-0"}`}>
         <div className="mb-8 flex h-10 items-center justify-between">
           <Link href="/agenda" className="flex items-center gap-2 font-bold text-[var(--primary)]">
             <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--primary)] text-white"><Stethoscope size={19} /></span>
@@ -57,7 +58,7 @@ export function AppShell({ session, today, children }: { session: SessionContext
 
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)] bg-white/95 px-4 lg:px-7">
         <div className="flex items-center gap-3">
-          <button className="button !p-2 lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu"><Menu size={19} /></button>
+          <button className="button !p-2" onClick={() => window.innerWidth < 1024 ? setOpen(!open) : setDesktopClosed(!desktopClosed)} aria-label="Alternar menu"><Menu size={19} /></button>
           <div className="desktop-only">
             <p className="text-sm font-semibold">{session.clinicName}</p>
             <p className="text-xs muted">{today}</p>
