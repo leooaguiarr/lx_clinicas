@@ -8,3 +8,12 @@ import { z } from "zod";
 export const uuidSchema = z
   .string()
   .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "Identificador inválido");
+
+/**
+ * Destino de redirecionamento vindo da URL (`?next=`).
+ * Só aceita caminho interno — "//evil.com" é uma URL absoluta disfarçada e
+ * levaria o usuário para fora do sistema depois do login.
+ */
+export function safeNext(value: string | null | undefined, fallback = "/agenda"): string {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : fallback;
+}

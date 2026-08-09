@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-09 · botão de recolher alinhado ao ícone do logo
+> **Última atualização:** 2026-08-09 · recuperação de senha (requer SMTP na instância Supabase)
 
 ---
 
@@ -39,6 +39,9 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 - ✅ **Agenda com grade dinâmica**: as horas exibidas vêm de `professional_schedules` e se
   esticam para cobrir qualquer agendamento fora do expediente; sábado/domingo aparecem quando
   há expediente ou algo marcado; atendimentos simultâneos ficam lado a lado.
+- ⚠️ **Recuperação de senha** (`/esqueci-minha-senha` → e-mail → `/auth/confirmar` → `/redefinir-senha`):
+  código pronto, mas **só funciona depois de configurar SMTP e Redirect URLs** na instância
+  Supabase. Ver seção 4.2.
 - ✅ **Troca de abas com resposta imediata**: `loading.tsx` em cada rota do dashboard
   (esqueletos em `src/components/skeletons.tsx`). Cada navegação faz ~5 consultas em série ao
   Supabase (~150 ms cada); sem o esqueleto, o App Router segurava a tela anterior o tempo todo
@@ -177,11 +180,43 @@ em `audit_logs` (`patient.created` seguido de `appointment.created`).
    e `Verificar status atendimento` (Postgres) e `Listar arquivos` (Drive).
 
 
+## 4.2 Recuperação de senha — falta configurar o Supabase
+
+O fluxo no app está pronto:
+
+`/esqueci-minha-senha` → `resetPasswordForEmail` → e-mail → `/auth/confirmar` (troca o token
+por sessão) → `/redefinir-senha` → `updateUser({ password })` → `/agenda`.
+
+**Nada disso funciona enquanto a instância não tiver duas coisas configuradas** — e as duas
+são no Supabase self-hosted (Coolify), não no código:
+
+1. **SMTP**. Sem servidor de e-mail o Supabase não envia nada e a falha é silenciosa para
+   quem pediu (a tela sempre responde "se houver uma conta, o link chegará" — de propósito,
+   para a tela não virar um verificador de quem é cliente). O erro real aparece no log do
+   servidor, com `scope: "action.requestPasswordReset"`.
+2. **Redirect URLs**. Autenticar → URL Configuration: incluir `https://lx-clinicas.vercel.app/**`
+   e `http://localhost:3000/**`. Sem isso o link do e-mail volta para o Site URL padrão e o
+   token nunca chega em `/auth/confirmar`.
+
+`/auth/confirmar` aceita tanto `?code=` (PKCE, padrão do `@supabase/ssr`) quanto
+`?token_hash=&type=` (template com `{{ .TokenHash }}`), porque o formato depende do template
+de e-mail configurado na instância — presumir um só quebraria conforme a configuração.
+
+`/redefinir-senha` é rota pública no proxy **de propósito**: quem chega com link vencido não
+tem sessão, e mandar essa pessoa para o login esconderia o motivo. A página é que exige a
+sessão antes de mostrar o formulário.
+
 ## 5. Próximos passos (ordem sugerida)
 
 A ordem prioriza **confiabilidade do que já está no ar** antes de superfície nova — há um
 agente autônomo escrevendo no banco em produção.
 
+0. **Cadastro self-service de clínica** (decidido em 09/08: a clínica se cadastra sozinha).
+   Hoje criar acesso exige SQL manual (`supabase/README.md`), o que não escala para cobrar
+   mensalidade de várias clínicas. Precisa de: signup que cria `clinics` + usuário + vínculo
+   admin em `clinic_members` + `profiles` numa transação, confirmação de e-mail e proteção
+   contra abuso. Depois disso vem o controle de assinatura (o schema **não tem** nenhum campo
+   de plano, vencimento ou status de pagamento).
 1. **Ações de agendamento na UI da agenda** (confirmar/cancelar/remarcar clicando no card).
    `updateAppointmentStatus` em `src/lib/actions/appointments.ts` já existe, mas está **sem uso
    e sem validação** (recebe `string` e faz `status as never`) — tipar com `z.enum` ao ligar.
@@ -219,3 +254,4 @@ agente autônomo escrevendo no banco em produção.
 | 2026-08-09 | Ajuste no `app-shell`: botão de menu colapsável no desktop e dropdown de notificações (com o ponto vermelho oculto enquanto não houver notificações reais). |
 | 2026-08-09 | Navegação entre abas: `loading.tsx` por rota + `clinic_members`/`profiles` em paralelo na sessão. A troca de aba responde na hora, em vez de congelar ~1 s sem sinal nenhum. |
 | 2026-08-09 | Barra lateral: o botão de recolher passou para dentro dela (acima do logo) e recolher agora deixa uma faixa de 76 px só com ícones, em vez de esconder o menu. |
+| 2026-08-09 | Recuperação de senha ponta a ponta (o botão "Esqueci minha senha" era decorativo e a rota já liberada no proxy não tinha página). Falta SMTP + Redirect URLs na instância — ver 4.2. |

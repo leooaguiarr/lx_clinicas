@@ -3,7 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 import type { Database } from "@/types/database";
 
-const PUBLIC_ROUTES = ["/login", "/esqueci-minha-senha", "/auth"];
+/*
+ * `/redefinir-senha` é pública de propósito: quem chega com o link vencido não
+ * tem sessão, e mandar essa pessoa para o login esconderia o motivo. A própria
+ * página exige a sessão criada por `/auth/confirmar` antes de mostrar o
+ * formulário.
+ */
+const PUBLIC_ROUTES = ["/login", "/esqueci-minha-senha", "/redefinir-senha", "/auth"];
 
 function isPublic(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));

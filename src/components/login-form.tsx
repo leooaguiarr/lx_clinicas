@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { signIn, type AuthFormState } from "@/lib/actions/auth";
@@ -33,9 +34,9 @@ export function LoginForm({ next }: { next?: string }) {
         </p>
       )}
       <div className="flex justify-end">
-        <button type="button" className="text-xs font-semibold text-[var(--primary)]">
+        <Link className="text-xs font-semibold text-[var(--primary)]" href="/esqueci-minha-senha">
           Esqueci minha senha
-        </button>
+        </Link>
       </div>
       <SubmitButton />
     </form>
