@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-09 · barra lateral recolhe para faixa de ícones
+> **Última atualização:** 2026-08-09 · botão de recolher alinhado ao ícone do logo
 
 ---
 

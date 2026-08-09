@@ -42,7 +42,8 @@ export function AppShell({ session, today, children }: { session: SessionContext
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-[236px] flex-col border-r border-[var(--border)] bg-white p-4 transition-all duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[76px] lg:px-3" : "lg:w-[236px]"}`}
       >
-        <div className={`mb-2 flex h-9 items-center ${collapsed ? "lg:justify-center" : "justify-end"}`}>
+        {/* Alinhado à esquerda para cair na mesma coluna do ícone do logo, logo abaixo. */}
+        <div className={`mb-2 flex h-9 items-center ${collapsed ? "lg:justify-center" : ""}`}>
           {/*
             O invólucro é quem esconde/mostra: a classe .button do globals.css fica
             fora de @layer e por isso ganha de qualquer utility de display aplicada
@@ -59,7 +60,7 @@ export function AppShell({ session, today, children }: { session: SessionContext
               <Menu size={18} />
             </button>
           </span>
-          <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
+          <button className="ml-auto lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
         </div>
 
         <Link
