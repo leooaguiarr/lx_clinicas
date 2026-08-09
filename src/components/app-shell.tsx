@@ -21,6 +21,7 @@ export function AppShell({ session, today, children }: { session: SessionContext
   const [open, setOpen] = useState(false);
   const [desktopClosed, setDesktopClosed] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // O profissional não enxerga o financeiro (seção 5.3 da SPEC).
   const items = FINANCE_ROLES.includes(session.role) ? nav : nav.filter((item) => item.href !== "/financeiro");
@@ -65,10 +66,25 @@ export function AppShell({ session, today, children }: { session: SessionContext
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="button relative !p-2" aria-label="Notificações">
-            <Bell size={18} />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)]" />
-          </button>
+          <div className="relative">
+            <button className="button relative !p-2" aria-label="Notificações" onClick={() => setNotificationsOpen((v) => !v)} aria-expanded={notificationsOpen} aria-haspopup="menu">
+              <Bell size={18} />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)]" />
+            </button>
+            {notificationsOpen && (
+              <>
+                <button className="fixed inset-0 z-30" aria-label="Fechar notificações" onClick={() => setNotificationsOpen(false)} />
+                <div role="menu" className="absolute right-0 z-40 mt-2 w-72 rounded-lg border border-[var(--border)] bg-white shadow-[0_8px_24px_rgba(23,43,58,.1)] overflow-hidden">
+                  <div className="border-b border-[var(--border)] px-4 py-3 bg-[#fbfcfd]">
+                    <p className="text-sm font-semibold">Notificações</p>
+                  </div>
+                  <div className="p-6 text-center text-sm muted">
+                    Você não tem novas notificações.
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <div className="relative">
             <button className="button" onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-haspopup="menu">
               <span className="grid h-7 w-7 place-items-center rounded-full bg-[#dcecef] text-xs text-[var(--primary)]">{session.initials}</span>
