@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-09 · troca de abas com resposta imediata (esqueletos de carregamento)
+> **Última atualização:** 2026-08-09 · barra lateral recolhe para faixa de ícones
 
 ---
 
@@ -57,6 +57,7 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 9. `professional_schedules` foi populada por nós (seg–sex 08:00–18:00, 30 min, 3 profissionais) — ajustar quando a clínica definir horários reais. A agenda **lê essa tabela** para montar a grade: mudar os horários lá muda o que a tela mostra.
 10. A grade da agenda tem linhas de 30 min, mas os cards são posicionados **por minuto** (`startMinutes`), então um horário quebrado como 08:20 aparece no lugar certo. A lógica pura está em `src/lib/agenda-layout.ts`, separada das queries justamente para ser testável.
 11. `GET /availability` agora responde **500 se qualquer uma das consultas falhar**. É proposital: devolver a lista parcial fazia o agente oferecer horário já ocupado.
+12. **CSS**: as classes de `globals.css` (`.button`, `.panel`, `.input`…) ficam **fora de `@layer`**, e no Tailwind 4 isso as faz ganhar de qualquer utility — `<button className="button lg:hidden">` não esconde nada. Ou se envolve o elemento num `<span>` com a utility, ou se usa `!` (o prefixo `!hidden` ainda funciona na 4.3.3, apesar de a documentação preferir o sufixo).
 
 ## 4. Configurar um computador novo
 
@@ -217,3 +218,4 @@ agente autônomo escrevendo no banco em produção.
 | 2026-08-07 | Revisão do código: log de erros no servidor (antes não havia nenhum) e correção da agenda, que escondia sem aviso os atendimentos fora de 08:00–18:00/seg–sex e empilhava cards simultâneos um sobre o outro |
 | 2026-08-09 | Ajuste no `app-shell`: botão de menu colapsável no desktop e dropdown de notificações (com o ponto vermelho oculto enquanto não houver notificações reais). |
 | 2026-08-09 | Navegação entre abas: `loading.tsx` por rota + `clinic_members`/`profiles` em paralelo na sessão. A troca de aba responde na hora, em vez de congelar ~1 s sem sinal nenhum. |
+| 2026-08-09 | Barra lateral: o botão de recolher passou para dentro dela (acima do logo) e recolher agora deixa uma faixa de 76 px só com ícones, em vez de esconder o menu. |

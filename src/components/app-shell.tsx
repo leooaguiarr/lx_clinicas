@@ -19,7 +19,7 @@ const nav = [
 export function AppShell({ session, today, children }: { session: SessionContext; today: string; children: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
-  const [desktopClosed, setDesktopClosed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [menu, setMenu] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -29,31 +29,65 @@ export function AppShell({ session, today, children }: { session: SessionContext
   // TODO: Implementar lógica real de notificações
   const hasNotifications = false;
 
+  /*
+   * `collapsed` só vale no desktop: a barra encolhe para uma faixa de ícones em
+   * vez de sair da tela. No celular ela continua sendo uma gaveta (`open`), e por
+   * isso todas as classes de recolhimento são prefixadas com `lg:` — o conteúdo
+   * textual segue visível na gaveta.
+   */
+  const hideWhenCollapsed = collapsed ? "lg:hidden" : "";
+
   return (
-    <div className={`min-h-screen transition-all duration-300 ${desktopClosed ? "lg:pl-0" : "lg:pl-[236px]"}`}>
-      <aside className={`fixed inset-y-0 left-0 z-40 w-[236px] border-r border-[var(--border)] bg-white p-4 transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} ${desktopClosed ? "lg:-translate-x-full" : "lg:translate-x-0"}`}>
-        <div className="mb-8 flex h-10 items-center justify-between">
-          <Link href="/agenda" className="flex items-center gap-2 font-bold text-[var(--primary)]">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-[var(--primary)] text-white"><Stethoscope size={19} /></span>
-            <span>Lx Clínicas</span>
-          </Link>
+    <div className={`min-h-screen transition-all duration-300 ${collapsed ? "lg:pl-[76px]" : "lg:pl-[236px]"}`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-[236px] flex-col border-r border-[var(--border)] bg-white p-4 transition-all duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[76px] lg:px-3" : "lg:w-[236px]"}`}
+      >
+        <div className={`mb-2 flex h-9 items-center ${collapsed ? "lg:justify-center" : "justify-end"}`}>
+          {/*
+            O invólucro é quem esconde/mostra: a classe .button do globals.css fica
+            fora de @layer e por isso ganha de qualquer utility de display aplicada
+            ao próprio botão.
+          */}
+          <span className="hidden lg:block">
+            <button
+              className="button !p-2"
+              onClick={() => setCollapsed((value) => !value)}
+              aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!collapsed}
+              title={collapsed ? "Expandir menu" : "Recolher menu"}
+            >
+              <Menu size={18} />
+            </button>
+          </span>
           <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
         </div>
+
+        <Link
+          href="/agenda"
+          className={`mb-7 flex h-10 items-center gap-2 font-bold text-[var(--primary)] ${collapsed ? "lg:justify-center" : ""}`}
+          title={collapsed ? "Lx Clínicas" : undefined}
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary)] text-white"><Stethoscope size={19} /></span>
+          <span className={`whitespace-nowrap ${hideWhenCollapsed}`}>Lx Clínicas</span>
+        </Link>
+
         <nav className="space-y-1">
           {items.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${path.startsWith(href) ? "bg-[#eaf3f6] text-[var(--primary)]" : "text-[#526672] hover:bg-[#f5f8fa]"}`}
+              title={collapsed ? label : undefined}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${collapsed ? "lg:justify-center lg:px-0" : ""} ${path.startsWith(href) ? "bg-[#eaf3f6] text-[var(--primary)]" : "text-[#526672] hover:bg-[#f5f8fa]"}`}
             >
-              <Icon size={18} />
-              {label}
+              <Icon size={18} className="shrink-0" />
+              <span className={`whitespace-nowrap ${hideWhenCollapsed}`}>{label}</span>
             </Link>
           ))}
         </nav>
-        <div className="absolute bottom-4 left-4 right-4 border-t border-[var(--border)] pt-4">
-          <p className="text-xs font-semibold">{session.clinicName}</p>
+
+        <div className={`mt-auto border-t border-[var(--border)] pt-4 ${hideWhenCollapsed}`}>
+          <p className="truncate text-xs font-semibold">{session.clinicName}</p>
           <p className="mt-1 text-[11px] text-[var(--text-secondary)]">{ROLE_LABEL[session.role]}</p>
         </div>
       </aside>
@@ -62,7 +96,10 @@ export function AppShell({ session, today, children }: { session: SessionContext
 
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)] bg-white/95 px-4 lg:px-7">
         <div className="flex items-center gap-3">
-          <button className="button !p-2" onClick={() => window.innerWidth < 1024 ? setOpen(!open) : setDesktopClosed(!desktopClosed)} aria-label="Alternar menu"><Menu size={19} /></button>
+          {/* No desktop o controle da barra vive dentro dela; aqui é só a gaveta do celular. */}
+          <span className="lg:hidden">
+            <button className="button !p-2" onClick={() => setOpen(!open)} aria-label="Abrir menu"><Menu size={19} /></button>
+          </span>
           <div className="desktop-only">
             <p className="text-sm font-semibold">{session.clinicName}</p>
             <p className="text-xs muted">{today}</p>
