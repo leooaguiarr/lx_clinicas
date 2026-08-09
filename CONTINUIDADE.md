@@ -192,4 +192,4 @@ agente autônomo escrevendo no banco em produção.
 | --- | --- |
 | 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração → repositório privado no GitHub → workflows n8n migrados do backend antigo → prompt reescrito → **agente agendando pelo WhatsApp** |
 | 2026-08-07 | Revisão do código: log de erros no servidor (antes não havia nenhum) e correção da agenda, que escondia sem aviso os atendimentos fora de 08:00–18:00/seg–sex e empilhava cards simultâneos um sobre o outro |
-| 2026-08-09 | Ajuste no `app-shell`: botão de menu agora funciona no desktop, permitindo ocultar a barra lateral e usar a largura total da tela. Adicionado também o menu dropdown vazio para o botão de notificações, que antes não tinha ação. |
+| 2026-08-09 | Ajuste no `app-shell`: botão de menu colapsável no desktop e dropdown de notificações (com o ponto vermelho oculto enquanto não houver notificações reais). |

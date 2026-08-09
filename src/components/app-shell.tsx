@@ -26,6 +26,9 @@ export function AppShell({ session, today, children }: { session: SessionContext
   // O profissional não enxerga o financeiro (seção 5.3 da SPEC).
   const items = FINANCE_ROLES.includes(session.role) ? nav : nav.filter((item) => item.href !== "/financeiro");
 
+  // TODO: Implementar lógica real de notificações
+  const hasNotifications = false;
+
   return (
     <div className={`min-h-screen transition-all duration-300 ${desktopClosed ? "lg:pl-0" : "lg:pl-[236px]"}`}>
       <aside className={`fixed inset-y-0 left-0 z-40 w-[236px] border-r border-[var(--border)] bg-white p-4 transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"} ${desktopClosed ? "lg:-translate-x-full" : "lg:translate-x-0"}`}>
@@ -69,7 +72,7 @@ export function AppShell({ session, today, children }: { session: SessionContext
           <div className="relative">
             <button className="button relative !p-2" aria-label="Notificações" onClick={() => setNotificationsOpen((v) => !v)} aria-expanded={notificationsOpen} aria-haspopup="menu">
               <Bell size={18} />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)]" />
+              {hasNotifications && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)]" />}
             </button>
             {notificationsOpen && (
               <>
