@@ -37,22 +37,21 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
 
   if (!user) return null;
 
-  const { data: membership } = await supabase
-    .from("clinic_members")
-    .select("role, clinic_id, clinics(name, timezone)")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  // Ambas dependem só de user.id: em série custavam uma ida a mais ao banco em
+  // toda navegação, já que o layout do dashboard chama isto a cada página.
+  const [{ data: membership }, { data: profile }] = await Promise.all([
+    supabase
+      .from("clinic_members")
+      .select("role, clinic_id, clinics(name, timezone)")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+  ]);
 
   if (!membership?.clinics) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .maybeSingle();
 
   const fullName = profile?.full_name ?? user.email?.split("@")[0] ?? "Usuário";
   const clinic = membership.clinics as unknown as { name: string; timezone: string };

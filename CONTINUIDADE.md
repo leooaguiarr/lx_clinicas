@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-09 · menu lateral colapsável no desktop
+> **Última atualização:** 2026-08-09 · troca de abas com resposta imediata (esqueletos de carregamento)
 
 ---
 
@@ -39,6 +39,10 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 - ✅ **Agenda com grade dinâmica**: as horas exibidas vêm de `professional_schedules` e se
   esticam para cobrir qualquer agendamento fora do expediente; sábado/domingo aparecem quando
   há expediente ou algo marcado; atendimentos simultâneos ficam lado a lado.
+- ✅ **Troca de abas com resposta imediata**: `loading.tsx` em cada rota do dashboard
+  (esqueletos em `src/components/skeletons.tsx`). Cada navegação faz ~5 consultas em série ao
+  Supabase (~150 ms cada); sem o esqueleto, o App Router segurava a tela anterior o tempo todo
+  e o clique parecia não responder.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 
@@ -71,6 +75,21 @@ npm run dev        # http://localhost:3000
 ```
 
 Login: usuário criado no Supabase Auth + vínculo em `clinic_members` (SQL em `supabase/README.md`).
+
+### Como o dono do projeto testa (instrução para agentes de IA)
+
+**Não suba `npm run dev` para o usuário testar** — ele valida direto em produção.
+Ao terminar uma entrega, o fluxo é:
+
+```bash
+npx tsc --noEmit && npm run build     # verificação obrigatória antes de publicar
+git commit && git push                # atualize CONTINUIDADE.md antes, senão o hook barra
+npx vercel deploy --prod --yes        # o push sozinho NÃO publica
+```
+
+O deploy é manual: `git push` só atualiza o GitHub. Quem valida a tela é o usuário,
+no app em produção — o agente só confirma o que dá para conferir por
+fora (build, typecheck, respostas HTTP da API). A URL de produção está na tabela da seção 1.
 
 ## 4.1 Integração n8n (estado em 2026-07-23)
 
@@ -184,6 +203,10 @@ agente autônomo escrevendo no banco em produção.
 - `authenticateRequest` grava `last_used_at` a **cada** request — uma escrita por chamada do
   agente. Vale só atualizar se o último uso for mais velho que alguns minutos.
 - `DEFAULT_SCOPES` concede os 5 escopos sempre; a UI não permite escolher.
+- **A sessão é validada duas vezes por navegação**: `updateSession` (proxy) e `getSessionContext`
+  chamam `auth.getUser()`, que é um round-trip cada. Dá para eliminar a duplicata, mas mexer em
+  validação de sessão quebra login de forma sutil — merece uma entrega própria. Depois disso, o
+  ganho seguinte é streaming com `<Suspense>` nas páginas mais pesadas.
 - `tsconfig.tsbuildinfo` está rastreado no git e deveria estar no `.gitignore`.
 
 ## 6. Histórico resumido
@@ -193,3 +216,4 @@ agente autônomo escrevendo no banco em produção.
 | 2026-07-23 | Frontend navegável (mock) → conexão real com Supabase → deploy Vercel → API /api/v1 + tokens de integração → repositório privado no GitHub → workflows n8n migrados do backend antigo → prompt reescrito → **agente agendando pelo WhatsApp** |
 | 2026-08-07 | Revisão do código: log de erros no servidor (antes não havia nenhum) e correção da agenda, que escondia sem aviso os atendimentos fora de 08:00–18:00/seg–sex e empilhava cards simultâneos um sobre o outro |
 | 2026-08-09 | Ajuste no `app-shell`: botão de menu colapsável no desktop e dropdown de notificações (com o ponto vermelho oculto enquanto não houver notificações reais). |
+| 2026-08-09 | Navegação entre abas: `loading.tsx` por rota + `clinic_members`/`profiles` em paralelo na sessão. A troca de aba responde na hora, em vez de congelar ~1 s sem sinal nenhum. |
