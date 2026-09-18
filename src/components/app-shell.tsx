@@ -2,7 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bell, CalendarDays, ChevronDown, LogOut, Menu, Settings, Users, WalletCards, X, Stethoscope } from "lucide-react";
+import {
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Menu,
+  Settings,
+  Stethoscope,
+  Users,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 import { signOut } from "@/lib/actions/auth";
 import { FINANCE_ROLES, ROLE_LABEL } from "@/lib/domain";
@@ -42,34 +56,36 @@ export function AppShell({ session, today, children }: { session: SessionContext
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-[236px] flex-col border-r border-[var(--border)] bg-white p-4 transition-all duration-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[76px] lg:px-3" : "lg:w-[236px]"}`}
       >
-        {/* Alinhado à esquerda para cair na mesma coluna do ícone do logo, logo abaixo. */}
-        <div className={`mb-2 flex h-9 items-center ${collapsed ? "lg:justify-center" : ""}`}>
-          {/*
-            O invólucro é quem esconde/mostra: a classe .button do globals.css fica
-            fora de @layer e por isso ganha de qualquer utility de display aplicada
-            ao próprio botão.
-          */}
-          <span className="hidden lg:block">
-            <button
-              className="button !p-2"
-              onClick={() => setCollapsed((value) => !value)}
-              aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
-              aria-expanded={!collapsed}
-              title={collapsed ? "Expandir menu" : "Recolher menu"}
-            >
-              <Menu size={18} />
-            </button>
-          </span>
-          <button className="ml-auto lg:hidden" onClick={() => setOpen(false)} aria-label="Fechar menu"><X /></button>
+        {/* Setinha elegante na linha da coluna (borda direita) para abrir/fechar a barra */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((value) => !value)}
+          className="absolute -right-3 top-6 z-50 hidden h-6 w-6 items-center justify-center rounded-full border border-[var(--border)] bg-white text-[var(--text-secondary)] shadow-[0_1px_4px_rgba(0,0,0,0.08)] transition-all hover:scale-110 hover:border-[var(--primary)] hover:text-[var(--primary)] hover:bg-[#f8fafc] lg:flex"
+          aria-label={collapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
+          title={collapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
+        >
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+
+        {/* Botão de fechar no mobile */}
+        <div className="flex h-9 items-center justify-end lg:hidden">
+          <button className="button !p-2" onClick={() => setOpen(false)} aria-label="Fechar menu">
+            <X size={18} />
+          </button>
         </div>
 
+        {/* Logo */}
         <Link
           href="/agenda"
-          className={`mb-7 flex h-10 items-center gap-2 font-bold text-[var(--primary)] ${collapsed ? "lg:justify-center" : ""}`}
+          className={`mb-6 flex h-10 items-center gap-2.5 font-bold text-[var(--primary)] ${collapsed ? "lg:justify-center" : ""}`}
           title={collapsed ? "Lx Clínicas" : undefined}
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary)] text-white"><Stethoscope size={19} /></span>
-          <span className={`whitespace-nowrap ${hideWhenCollapsed}`}>Lx Clínicas</span>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--primary)] text-white">
+            <Stethoscope size={19} />
+          </span>
+          <span className={`whitespace-nowrap font-bold text-base text-[var(--primary)] ${hideWhenCollapsed}`}>
+            Lx Clínicas
+          </span>
         </Link>
 
         <nav className="space-y-1">
