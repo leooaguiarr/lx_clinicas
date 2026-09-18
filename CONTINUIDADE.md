@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-09-18 · resgate do polimento de UI/UX (perfil do paciente com abas, busca por CPF, filtro no financeiro e renovação da paleta de cores)
+> **Última atualização:** 2026-09-18 · Landing page no domínio raiz (/) com vitrine de planos de assinatura e botão de Área do Cliente (/login)
 
 ---
 
@@ -51,6 +51,12 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
   - Tabela de pacientes com suporte a busca de dígitos de CPF (`cpf.ilike`), indicador `Página X de Y` e feedback de botões desabilitados.
   - Página de Financeiro (`/financeiro`) com dropdown interativo para filtragem rápida por status nas movimentações recentes e ajuste de altura mínima nas barras do gráfico de fluxo.
   - Renovação e formatação da paleta de cores em `globals.css` (Teal 600 / Slate / Indigo) com visual clínico moderno e clean.
+- ✅ **Landing Page pública & Vitrine de Assinaturas no domínio raiz (`/`)**:
+  - Rota `/` liberada publicamente no proxy para exibição da vitrine comercial para visitantes;
+  - Header institucional com botão direto para **Área do Cliente** (`/login`) ou **Acessar Painel** (`/agenda`) se o usuário já possuir sessão ativa;
+  - Hero section com demonstração em código da agenda semanal integrada ao chat do WhatsApp da secretária IA (Sofia);
+  - Seção de planos de assinatura com toggle mensal/anual e 3 categorias de planos (*Essencial*, *Profissional + IA* e *Clínica Escala*);
+  - Seções completas de funcionalidades, métricas de impacto, perguntas frequentes (FAQ) e rodapé institucional.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 
@@ -261,3 +267,4 @@ agente autônomo escrevendo no banco em produção.
 | 2026-08-09 | Barra lateral: o botão de recolher passou para dentro dela (acima do logo) e recolher agora deixa uma faixa de 76 px só com ícones, em vez de esconder o menu. |
 | 2026-08-09 | Recuperação de senha ponta a ponta (o botão "Esqueci minha senha" era decorativo e a rota já liberada no proxy não tinha página). Falta SMTP + Redirect URLs na instância — ver 4.2. |
 | 2026-09-18 | Resgate de UI/UX da branch `polimento-frontend`: perfil do paciente com 5 abas (`Resumo`, `Agendamentos`, `Financeiro`, `Documentos`, `Histórico`) conectado ao Supabase; busca de pacientes por CPF; filtro rápido por status nas movimentações do financeiro; renovação da paleta de cores para padrão clínico moderno (Teal 600 / Slate / Indigo); e substituição do botão de menu na barra lateral por botão retrátil com setinha (chevron) na linha da coluna. |
+| 2026-09-18 | Criação da Landing Page pública e vitrine de assinaturas no domínio raiz (`/`): apresentação da plataforma com foco em agendamento por IA no WhatsApp, tabela de planos (*Essencial*, *Profissional + IA*, *Escala*) com faturamento mensal/anual e botão direto de acesso à Área do Cliente (`/login`) ou Painel. |

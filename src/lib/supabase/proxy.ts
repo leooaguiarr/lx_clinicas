@@ -9,10 +9,11 @@ import type { Database } from "@/types/database";
  * página exige a sessão criada por `/auth/confirmar` antes de mostrar o
  * formulário.
  */
-const PUBLIC_ROUTES = ["/login", "/esqueci-minha-senha", "/redefinir-senha", "/auth"];
+const PUBLIC_ROUTES = ["/", "/login", "/esqueci-minha-senha", "/redefinir-senha", "/auth"];
 
 function isPublic(pathname: string) {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  if (pathname === "/") return true;
+  return PUBLIC_ROUTES.some((route) => route !== "/" && (pathname === route || pathname.startsWith(`${route}/`)));
 }
 
 /**
