@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-09-18 · Etapa 1: Gestão Completa de Profissionais, Expediente Semanal (professional_schedules) e Procedimentos Atendidos (professional_procedures) na UI
+> **Última atualização:** 2026-09-18 · Fix: correção da validação Zod no login (campo next nullish quando acessado diretamente sem query param)
 
 ---
 

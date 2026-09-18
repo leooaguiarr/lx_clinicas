@@ -11,7 +11,7 @@ import { safeNext } from "@/lib/validation";
 const credentialsSchema = z.object({
   email: z.string().email("Informe um e-mail válido"),
   password: z.string().min(6, "A senha precisa ter ao menos 6 caracteres"),
-  next: z.string().optional(),
+  next: z.string().nullish(),
 });
 
 export type AuthFormState = { error?: string };
@@ -31,7 +31,7 @@ export async function signIn(_previous: AuthFormState, formData: FormData): Prom
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
-    next: formData.get("next"),
+    next: formData.get("next") ?? undefined,
   });
 
   if (!parsed.success) {
