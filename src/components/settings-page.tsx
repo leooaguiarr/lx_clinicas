@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ClinicForm } from "./clinic-form";
 import { IntegrationTokens } from "./integration-tokens";
 import { PageHeader } from "./page-header";
+import { ProfessionalsTable } from "./professionals-table";
 import { SettingsNav } from "./settings-nav";
 import { StatusBadge } from "./status-badge";
 import { requireSession } from "@/lib/auth/session";
@@ -48,7 +49,7 @@ export async function SettingsPage({ kind }: { kind: string }) {
         <SettingsNav />
         <section className="panel p-5">
           {kind === "clinica" && <ClinicSection clinicId={session.clinicId} canEdit={isAdmin} />}
-          {kind === "profissionais" && <ProfessionalsSection clinicId={session.clinicId} />}
+          {kind === "profissionais" && <ProfessionalsSection clinicId={session.clinicId} isAdmin={isAdmin} />}
           {kind === "procedimentos" && <ProceduresSection clinicId={session.clinicId} />}
           {kind === "convenios" && <InsuranceSection clinicId={session.clinicId} />}
           {kind === "usuarios" && <MembersSection clinicId={session.clinicId} timezone={session.timezone} />}
@@ -77,35 +78,18 @@ async function ClinicSection({ clinicId, canEdit }: { clinicId: string; canEdit:
   );
 }
 
-async function ProfessionalsSection({ clinicId }: { clinicId: string }) {
-  const professionals = await listProfessionals(clinicId);
+async function ProfessionalsSection({ clinicId, isAdmin }: { clinicId: string; isAdmin: boolean }) {
+  const [professionals, procedures] = await Promise.all([
+    listProfessionals(clinicId),
+    listProcedures(clinicId),
+  ]);
 
   return (
-    <div className="table-wrap">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Especialidade</th>
-            <th>Conselho</th>
-            <th>Contato</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {professionals.map((professional) => (
-            <tr key={professional.id}>
-              <td className="font-medium">{professional.full_name}</td>
-              <td>{professional.specialty ?? "—"}</td>
-              <td>{[professional.council_type, professional.council_number].filter(Boolean).join(" ") || "—"}</td>
-              <td>{professional.email ?? professional.phone ?? "—"}</td>
-              <td><StatusBadge status={professional.active ? "Ativo" : "Inativo"} /></td>
-            </tr>
-          ))}
-          {professionals.length === 0 && <EmptyRow colSpan={5}>Nenhum profissional cadastrado.</EmptyRow>}
-        </tbody>
-      </table>
-    </div>
+    <ProfessionalsTable
+      professionals={professionals}
+      allProcedures={procedures}
+      isAdmin={isAdmin}
+    />
   );
 }
 

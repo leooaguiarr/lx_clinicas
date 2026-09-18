@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-09-18 · Landing page no domínio raiz (/) com vitrine de planos de assinatura e botão de Área do Cliente (/login)
+> **Última atualização:** 2026-09-18 · Etapa 1: Gestão Completa de Profissionais, Expediente Semanal (professional_schedules) e Procedimentos Atendidos (professional_procedures) na UI
 
 ---
 
@@ -20,6 +20,7 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 | Supabase (self-hosted, Coolify) | https://supabase.lexionconsultoria.tech |
 | Clínica de demonstração | Clínica Sorriso — `clinic_id: 00000000-0000-0000-0000-0000000c1171` |
 | Stack | Next.js 16 (App Router) · React 19 · TS · Tailwind · Zod · Supabase (@supabase/ssr) |
+| Gateway de Pagamento | **Asaas** (Pix, Cartão de Crédito e Boleto recorrente) |
 
 ## 2. Estado atual — o que JÁ está pronto
 
@@ -57,6 +58,14 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
   - Hero section com demonstração em código da agenda semanal integrada ao chat do WhatsApp da secretária IA (Sofia);
   - Seção de planos de assinatura com toggle mensal/anual e 3 categorias de planos (*Essencial*, *Profissional + IA* e *Clínica Escala*);
   - Seções completas de funcionalidades, métricas de impacto, perguntas frequentes (FAQ) e rodapé institucional.
+- ✅ **Gestão Completa de Profissionais & Expediente (`/configuracoes/profissionais`) — Etapa 1 Concluída**:
+  - Interface rica `ProfessionalsTable` com identificador de cor na agenda, conselho (CRO/CRM), contatos, resumo de expediente semanal e procedimentos atendidos.
+  - Toggle de status ativo/inativo direto na listagem para administradores.
+  - `ProfessionalDrawer` com 3 abas estruturadas:
+    1. *Identificação*: nome, especialidade, tipo e número do conselho, contatos, status e seletor visual de cores com paleta clínica moderna (`calendar_color`);
+    2. *Expediente & Horários*: configuração de dias de atendimento (Segunda a Domingo), início, fim e intervalo de consulta com botão de atalho comercial (Seg-Sex 08h às 18h);
+    3. *Procedimentos*: seleção por checkboxes dos procedimentos que o profissional executa na clínica.
+  - Server actions `saveProfessional` e `toggleProfessionalActive` atualizando atomicamente `professionals`, `professional_schedules` e `professional_procedures` com revalidação automática das telas `/configuracoes/profissionais` e `/agenda`.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 

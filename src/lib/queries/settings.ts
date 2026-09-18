@@ -15,16 +15,68 @@ export async function getClinic(clinicId: string) {
   return data;
 }
 
-export async function listProfessionals(clinicId: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("professionals")
-    .select("id, full_name, specialty, council_type, council_number, email, phone, calendar_color, active")
-    .eq("clinic_id", clinicId)
-    .order("full_name");
+export type ProfessionalDetail = {
+  id: string;
+  full_name: string;
+  specialty: string | null;
+  council_type: string | null;
+  council_number: string | null;
+  email: string | null;
+  phone: string | null;
+  calendar_color: string | null;
+  active: boolean;
+  schedules: {
+    id?: string;
+    weekday: number;
+    start_time: string;
+    end_time: string;
+    appointment_interval_minutes: number;
+    active: boolean;
+  }[];
+  procedure_ids: string[];
+};
 
-  if (error) throw error;
-  return data ?? [];
+export async function listProfessionals(clinicId: string): Promise<ProfessionalDetail[]> {
+  const supabase = await createClient();
+  const [{ data: professionals, error: profError }, { data: schedules }, { data: profProcedures }] =
+    await Promise.all([
+      supabase
+        .from("professionals")
+        .select("id, full_name, specialty, council_type, council_number, email, phone, calendar_color, active")
+        .eq("clinic_id", clinicId)
+        .order("full_name"),
+      supabase
+        .from("professional_schedules")
+        .select("id, professional_id, weekday, start_time, end_time, appointment_interval_minutes, active")
+        .eq("clinic_id", clinicId)
+        .order("weekday"),
+      supabase
+        .from("professional_procedures")
+        .select("professional_id, procedure_id")
+        .eq("clinic_id", clinicId),
+    ]);
+
+  if (profError) throw profError;
+
+  const schedulesByProf = new Map<string, NonNullable<typeof schedules>>();
+  for (const s of schedules ?? []) {
+    const list = schedulesByProf.get(s.professional_id) ?? [];
+    list.push(s);
+    schedulesByProf.set(s.professional_id, list);
+  }
+
+  const proceduresByProf = new Map<string, string[]>();
+  for (const p of profProcedures ?? []) {
+    const list = proceduresByProf.get(p.professional_id) ?? [];
+    list.push(p.procedure_id);
+    proceduresByProf.set(p.professional_id, list);
+  }
+
+  return (professionals ?? []).map((prof) => ({
+    ...prof,
+    schedules: schedulesByProf.get(prof.id) ?? [],
+    procedure_ids: proceduresByProf.get(prof.id) ?? [],
+  }));
 }
 
 export async function listProcedures(clinicId: string) {
