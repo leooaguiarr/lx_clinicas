@@ -1,7 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
-import { currentMonthRange, dateLabel, shortDateTimeLabel } from "@/lib/dates";
-import { ACTIVE_APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABEL, CARE_TYPE_LABEL, formatPhone } from "@/lib/domain";
-import type { AppointmentStatus, TransactionStatus } from "@/types/database";
+import { currentMonthRange, dateLabel, shortDateTimeLabel, timeLabel } from "@/lib/dates";
+import {
+  ACTIVE_APPOINTMENT_STATUSES,
+  APPOINTMENT_STATUS_LABEL,
+  CARE_TYPE_LABEL,
+  PAYMENT_METHOD_LABEL,
+  TRANSACTION_STATUS_LABEL,
+  formatPhone,
+} from "@/lib/domain";
+import type { AppointmentStatus, CareType, PaymentMethod, TransactionStatus } from "@/types/database";
 
 const OPEN_TRANSACTION_STATUSES: TransactionStatus[] = ["pending", "partial", "overdue"];
 const PAGE_SIZE = 25;
@@ -53,7 +60,7 @@ export async function listPatients(
     const term = options.search.trim();
     const digits = term.replace(/\D/g, "");
     query = digits.length >= 3
-      ? query.or(`full_name.ilike.%${term}%,normalized_phone.ilike.%${digits}%`)
+      ? query.or(`full_name.ilike.%${term}%,normalized_phone.ilike.%${digits}%,cpf.ilike.%${digits}%`)
       : query.ilike("full_name", `%${term}%`);
   }
 
@@ -209,7 +216,35 @@ export type PatientDetail = {
   status: "Ativo" | "Pendente" | "Inativo";
   nextAppointment: { date: string; procedure: string; professional: string } | null;
   stats: { total: number; last: string; noShows: number; cancellations: number; balance: number };
-  appointments: { id: string; when: string; procedure: string; professional: string; status: string }[];
+  appointments: {
+    id: string;
+    when: string;
+    date: string;
+    time: string;
+    procedure: string;
+    professional: string;
+    type: string;
+    value: number;
+    status: string;
+  }[];
+  transactions: {
+    id: string;
+    date: string;
+    description: string;
+    method: string;
+    amount: number;
+    status: string;
+  }[];
+  financialSummary: {
+    balance: number;
+    totalPaidThisYear: number;
+  };
+  history: {
+    id: string;
+    date: string;
+    author: string;
+    text: string;
+  }[];
 };
 
 export async function getPatientDetail(
@@ -234,17 +269,16 @@ export async function getPatientDetail(
   const [appointmentsResult, transactionsResult] = await Promise.all([
     supabase
       .from("appointments")
-      .select("id, start_at, status, professionals(full_name), procedures(name)")
+      .select("id, start_at, status, care_type, expected_value, received_value, professionals(full_name), procedures(name)")
       .eq("clinic_id", clinicId)
       .eq("patient_id", patientId)
       .order("start_at", { ascending: false }),
     supabase
       .from("financial_transactions")
-      .select("amount")
+      .select("id, description, amount, due_date, paid_at, payment_method, status, type, created_at")
       .eq("clinic_id", clinicId)
       .eq("patient_id", patientId)
-      .eq("type", "income")
-      .in("status", OPEN_TRANSACTION_STATUSES),
+      .order("created_at", { ascending: false }),
   ]);
 
   if (appointmentsResult.error) throw appointmentsResult.error;
@@ -253,20 +287,67 @@ export async function getPatientDetail(
     id: string;
     start_at: string;
     status: AppointmentStatus;
+    care_type: CareType;
+    expected_value: number | null;
+    received_value: number | null;
     professionals: { full_name: string } | null;
     procedures: { name: string } | null;
   };
 
+  type TransactionRow = {
+    id: string;
+    description: string;
+    amount: number;
+    due_date: string | null;
+    paid_at: string | null;
+    payment_method: PaymentMethod | null;
+    status: TransactionStatus;
+    type: "income" | "expense";
+    created_at: string;
+  };
+
   const appointments = (appointmentsResult.data ?? []) as unknown as AppointmentJoin[];
+  const rawTransactions = (transactionsResult.data ?? []) as unknown as TransactionRow[];
+
   const now = Date.now();
   const upcoming = [...appointments]
     .reverse()
     .find((item) => new Date(item.start_at).getTime() > now && ACTIVE_APPOINTMENT_STATUSES.includes(item.status));
   const past = appointments.find((item) => new Date(item.start_at).getTime() <= now && item.status === "completed");
 
-  // O financeiro é invisível para o perfil "professional" (RLS bloqueia o SELECT).
-  const balance = (transactionsResult.data ?? []).reduce((total, item) => total + Number(item.amount), 0);
+  const openIncomeTransactions = rawTransactions.filter(
+    (item) => item.type === "income" && OPEN_TRANSACTION_STATUSES.includes(item.status),
+  );
+  const balance = openIncomeTransactions.reduce((total, item) => total + Number(item.amount), 0);
+  const totalPaidThisYear = rawTransactions
+    .filter((item) => item.type === "income" && item.status === "paid")
+    .reduce((total, item) => total + Number(item.amount), 0);
+
   const insurance = (patient.insurance_companies as unknown as { name: string } | null)?.name ?? "—";
+
+  const transactions = rawTransactions.map((t) => ({
+    id: t.id,
+    date: dateLabel(t.paid_at ?? t.due_date ?? t.created_at, timezone),
+    description: t.description,
+    method: t.payment_method ? PAYMENT_METHOD_LABEL[t.payment_method] : "—",
+    amount: Number(t.amount),
+    status: TRANSACTION_STATUS_LABEL[t.status] ?? t.status,
+  }));
+
+  const history = [
+    {
+      id: `created-${patient.id}`,
+      date: dateLabel(patient.created_at, timezone),
+      author: "Sistema",
+      text: "Cadastro do paciente registrado na clínica.",
+    },
+    ...appointments.slice(0, 15).map((a) => ({
+      id: `app-${a.id}`,
+      date: shortDateTimeLabel(a.start_at, timezone),
+      author: a.professionals?.full_name ?? "Recepção",
+      text: `Consulta de ${a.procedures?.name ?? "atendimento"} registrada (${APPOINTMENT_STATUS_LABEL[a.status]}).`,
+    })),
+  ];
 
   return {
     id: patient.id,
@@ -293,12 +374,22 @@ export async function getPatientDetail(
       cancellations: appointments.filter((item) => item.status === "cancelled").length,
       balance,
     },
-    appointments: appointments.slice(0, 20).map((item) => ({
+    appointments: appointments.slice(0, 50).map((item) => ({
       id: item.id,
       when: shortDateTimeLabel(item.start_at, timezone),
+      date: dateLabel(item.start_at, timezone),
+      time: timeLabel(item.start_at, timezone),
       procedure: item.procedures?.name ?? "Atendimento",
       professional: item.professionals?.full_name ?? "—",
+      type: CARE_TYPE_LABEL[item.care_type] ?? "Particular",
+      value: Number(item.received_value ?? item.expected_value ?? 0),
       status: APPOINTMENT_STATUS_LABEL[item.status],
     })),
+    transactions,
+    financialSummary: {
+      balance,
+      totalPaidThisYear,
+    },
+    history,
   };
 }

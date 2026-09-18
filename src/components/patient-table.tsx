@@ -59,7 +59,7 @@ export function PatientTable({
             <Search className="absolute left-3 top-3 text-[var(--text-secondary)]" size={16} />
             <input
               className="input !pl-9"
-              placeholder="Buscar por nome ou telefone"
+              placeholder="Buscar por nome, telefone ou CPF"
               value={term}
               onChange={(event) => setTerm(event.target.value)}
             />
@@ -114,11 +114,20 @@ export function PatientTable({
 
         <div className="flex items-center justify-between border-t border-[var(--border)] p-4 text-xs muted">
           <span>Mostrando {result.items.length} de {result.total} pacientes</span>
-          <div className="flex gap-1">
-            <button className="button !px-3 !py-1.5" disabled={page <= 1} onClick={() => pushParams({ pagina: String(page - 1) })}>
+          <div className="flex items-center gap-2">
+            <button
+              className="button !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={page <= 1}
+              onClick={() => pushParams({ pagina: String(page - 1) })}
+            >
               Anterior
             </button>
-            <button className="button !px-3 !py-1.5" disabled={page >= lastPage} onClick={() => pushParams({ pagina: String(page + 1) })}>
+            <span>Página {page} de {lastPage}</span>
+            <button
+              className="button !px-3 !py-1.5 disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={page >= lastPage}
+              onClick={() => pushParams({ pagina: String(page + 1) })}
+            >
               Próxima
             </button>
           </div>

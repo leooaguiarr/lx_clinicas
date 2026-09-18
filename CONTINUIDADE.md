@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-08-09 · recuperação de senha (requer SMTP na instância Supabase)
+> **Última atualização:** 2026-09-18 · resgate do polimento de UI/UX (perfil do paciente com abas, busca por CPF, filtro no financeiro e renovação da paleta de cores)
 
 ---
 
@@ -46,6 +46,11 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
   (esqueletos em `src/components/skeletons.tsx`). Cada navegação faz ~5 consultas em série ao
   Supabase (~150 ms cada); sem o esqueleto, o App Router segurava a tela anterior o tempo todo
   e o clique parecia não responder.
+- ✅ **Resgate e integração de UI/UX da branch `origin/polimento-frontend` + Paleta Moderna**:
+  - Perfil do paciente (`/pacientes/[id]`) com 5 abas interativas (*Resumo*, *Agendamentos*, *Financeiro*, *Documentos*, *Histórico*) conectadas às queries reais do Supabase.
+  - Tabela de pacientes com suporte a busca de dígitos de CPF (`cpf.ilike`), indicador `Página X de Y` e feedback de botões desabilitados.
+  - Página de Financeiro (`/financeiro`) com dropdown interativo para filtragem rápida por status nas movimentações recentes e ajuste de altura mínima nas barras do gráfico de fluxo.
+  - Renovação e formatação da paleta de cores em `globals.css` (Teal 600 / Slate / Indigo) com visual clínico moderno e clean.
 
 ## 3. Decisões e pegadinhas (NÃO redescobrir do zero)
 
@@ -255,3 +260,4 @@ agente autônomo escrevendo no banco em produção.
 | 2026-08-09 | Navegação entre abas: `loading.tsx` por rota + `clinic_members`/`profiles` em paralelo na sessão. A troca de aba responde na hora, em vez de congelar ~1 s sem sinal nenhum. |
 | 2026-08-09 | Barra lateral: o botão de recolher passou para dentro dela (acima do logo) e recolher agora deixa uma faixa de 76 px só com ícones, em vez de esconder o menu. |
 | 2026-08-09 | Recuperação de senha ponta a ponta (o botão "Esqueci minha senha" era decorativo e a rota já liberada no proxy não tinha página). Falta SMTP + Redirect URLs na instância — ver 4.2. |
+| 2026-09-18 | Resgate de UI/UX da branch `polimento-frontend`: perfil do paciente com 5 abas (`Resumo`, `Agendamentos`, `Financeiro`, `Documentos`, `Histórico`) conectado ao Supabase; busca de pacientes por CPF; filtro rápido por status nas movimentações do financeiro; e renovação da paleta de cores para padrão clínico moderno (Teal 600 / Slate / Indigo). |

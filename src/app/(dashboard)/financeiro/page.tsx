@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AlertCircle, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { FinancialTransactionsTable } from "@/components/financial-transactions-table";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge } from "@/components/status-badge";
 import { SummaryCard } from "@/components/summary-card";
 import { requireSession } from "@/lib/auth/session";
 import { FINANCE_ROLES } from "@/lib/domain";
@@ -36,22 +36,42 @@ export default async function Financeiro() {
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <section className="panel p-5">
           <h2 className="font-bold">Fluxo dos últimos meses</h2>
-          <div className="mt-8 flex h-52 items-end gap-3 border-b border-l border-[var(--border)] px-4">
+          <div className="mt-8 flex h-52 items-end gap-3 border-b border-l border-[var(--border)] px-4 pb-0.5">
             {data.chart.map((month) => (
-              <div key={month.label} className="flex flex-1 items-end gap-1" title={`${month.label}: ${brl(month.income)} / ${brl(month.expense)}`}>
-                <span className="w-1/2 rounded-t bg-[var(--primary)]" style={{ height: `${(month.income / chartMax) * 100}%` }} />
-                <span className="w-1/2 rounded-t bg-[#d9e4e8]" style={{ height: `${(month.expense / chartMax) * 100}%` }} />
+              <div
+                key={month.label}
+                className="flex flex-1 items-end gap-1 h-full"
+                title={`${month.label}: ${brl(month.income)} / ${brl(month.expense)}`}
+              >
+                <span
+                  className="w-1/2 rounded-t bg-[var(--primary)] transition-all"
+                  style={{
+                    height: `${month.income > 0 ? Math.max(4, (month.income / chartMax) * 100) : 0}%`,
+                  }}
+                />
+                <span
+                  className="w-1/2 rounded-t bg-[#cbd5e1] transition-all"
+                  style={{
+                    height: `${month.expense > 0 ? Math.max(4, (month.expense / chartMax) * 100) : 0}%`,
+                  }}
+                />
               </div>
             ))}
           </div>
           <div className="mt-2 flex gap-3 px-4 text-[10px] muted">
             {data.chart.map((month) => (
-              <span key={month.label} className="flex-1 text-center">{month.label}</span>
+              <span key={month.label} className="flex-1 text-center font-medium">
+                {month.label}
+              </span>
             ))}
           </div>
           <div className="mt-3 flex gap-5 text-xs muted">
-            <span>● Receitas</span>
-            <span className="text-[#9cafb7]">● Despesas</span>
+            <span className="flex items-center gap-1.5 font-medium text-[var(--primary)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)]" /> Receitas
+            </span>
+            <span className="flex items-center gap-1.5 font-medium text-[var(--text-secondary)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#cbd5e1]" /> Despesas
+            </span>
           </div>
         </section>
 
@@ -61,11 +81,14 @@ export default async function Financeiro() {
             {data.statusBreakdown.map((item) => (
               <div key={item.label}>
                 <div className="mb-2 flex justify-between text-sm">
-                  <span>{item.label}</span>
+                  <span className="font-medium text-[var(--text-secondary)]">{item.label}</span>
                   <b>{brl(item.amount)}</b>
                 </div>
-                <div className="h-2 rounded-full bg-[#edf2f4]">
-                  <div className="h-2 rounded-full bg-[var(--primary)]" style={{ width: `${item.share}%` }} />
+                <div className="h-2 rounded-full bg-[#f1f5f9] overflow-hidden">
+                  <div
+                    className="h-2 rounded-full bg-[var(--primary)]"
+                    style={{ width: `${item.share}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -73,40 +96,7 @@ export default async function Financeiro() {
         </section>
       </div>
 
-      <section className="panel mt-4">
-        <div className="flex flex-wrap justify-between gap-2 border-b border-[var(--border)] p-4">
-          <h2 className="font-bold">Movimentações recentes</h2>
-        </div>
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Descrição</th>
-                <th>Categoria</th>
-                <th>Forma</th>
-                <th>Valor</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{transaction.date}</td>
-                  <td className="font-medium">{transaction.description}</td>
-                  <td>{transaction.category}</td>
-                  <td>{transaction.method}</td>
-                  <td className={transaction.amount < 0 ? "text-[var(--danger)]" : "text-[var(--success)]"}>{brl(transaction.amount)}</td>
-                  <td><StatusBadge status={transaction.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {data.transactions.length === 0 && (
-            <div className="p-10 text-center text-sm muted">Nenhuma movimentação registrada.</div>
-          )}
-        </div>
-      </section>
+      <FinancialTransactionsTable transactions={data.transactions} />
     </>
   );
 }
