@@ -3,7 +3,7 @@
 > **Propósito:** retomar o trabalho em qualquer computador ou com qualquer agente de IA.
 > **Regra:** este arquivo DEVE ser atualizado antes de todo `git push` (o hook em `.githooks/pre-push` bloqueia o push se ele não tiver sido tocado).
 >
-> **Última atualização:** 2026-09-18 · Fix: correção da validação Zod no login (campo next nullish quando acessado diretamente sem query param)
+> **Última atualização:** 2026-09-18 · Assinaturas & Planos: tela de Plano & Assinatura (/configuracoes/plano), simulador com 1 clique e trava de cotas de profissionais
 
 ---
 
@@ -23,6 +23,13 @@ Diferencial: agenda operável por agente de IA via WhatsApp (n8n + Chatwoot + Le
 | Gateway de Pagamento | **Asaas** (Pix, Cartão de Crédito e Boleto recorrente) |
 
 ## 2. Estado atual — o que JÁ está pronto
+
+- ✅ **Módulo de Plano & Assinatura (`/configuracoes/plano`) & Trava de Cotas**:
+  - Tabela `clinic_subscriptions` criada no Supabase e vinculada à clínica;
+  - Tela rica `SubscriptionSection` com medidores visuais de uso de recursos: cota de profissionais ativos, status da Secretária Sofia no WhatsApp e prontuário;
+  - **Simulador de planos com 1 clique**: permite alternar entre os planos *Essencial* (máx 2 profissionais, sem IA), *Profissional + IA* (máx 6 profissionais, IA ativa) e *Clínica Escala* (ilimitado) para testes imediatos;
+  - **Enforcement e trava de cota em Profissionais**: bloqueia o cadastro se a cota do plano for atingida, exibe banner com aviso amigável e link direto para upgrade;
+  - Server actions seguras `updateSubscriptionPlan` e validação de cota em `saveProfessional`.
 
 - ✅ **Frontend conectado ao Supabase** (nada de mock): agenda semanal, pacientes (lista/perfil/cadastro), financeiro, relatórios, configurações
 - ✅ **Auth real** (Supabase Auth por senha) + proxy protegendo o dashboard (`src/proxy.ts`)

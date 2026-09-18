@@ -233,6 +233,22 @@ export type AuditLogRow = {
   created_at: string;
 };
 
+export type PlanTier = "essencial" | "profissional" | "escala";
+export type SubscriptionStatus = "trial" | "active" | "past_due" | "canceled";
+export type BillingCycle = "monthly" | "yearly";
+
+export type ClinicSubscriptionRow = Timestamps & {
+  id: string;
+  clinic_id: string;
+  plan_tier: PlanTier;
+  billing_cycle: BillingCycle;
+  status: SubscriptionStatus;
+  trial_ends_at: string | null;
+  current_period_end: string | null;
+  max_professionals: number | null;
+  ai_agent_enabled: boolean;
+};
+
 /** Campos gerados pelo banco, opcionais em INSERT. */
 type Generated = "id" | "created_at" | "updated_at";
 
@@ -251,6 +267,7 @@ export type Database = {
   public: {
     Tables: {
       clinics: TableDef<ClinicRow, "timezone" | "status" | "default_appointment_minutes">;
+      clinic_subscriptions: TableDef<ClinicSubscriptionRow, "billing_cycle" | "status" | "max_professionals" | "ai_agent_enabled">;
       profiles: TableDef<ProfileRow>;
       clinic_members: TableDef<ClinicMemberRow, "status">;
       professionals: TableDef<ProfessionalRow, "active">;

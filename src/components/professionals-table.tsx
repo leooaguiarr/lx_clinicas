@@ -1,12 +1,14 @@
 "use client";
 
-import { Edit, Mail, Phone, Plus, Stethoscope, UserCheck, UserX } from "lucide-react";
+import Link from "next/link";
+import { Edit, Mail, Phone, Plus, Sparkles, Stethoscope, UserCheck, UserX } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ProfessionalDrawer } from "./professional-drawer";
 import { StatusBadge } from "./status-badge";
 import { toggleProfessionalActive } from "@/lib/actions/settings";
 import type { ProfessionalDetail } from "@/lib/queries/settings";
+import type { ClinicSubscriptionRow } from "@/types/database";
 
 function formatScheduleSummary(
   schedules: { weekday: number; active: boolean; start_time: string; end_time: string }[],
@@ -29,16 +31,22 @@ function formatScheduleSummary(
 export function ProfessionalsTable({
   professionals,
   allProcedures,
+  subscription,
   isAdmin,
 }: {
   professionals: ProfessionalDetail[];
   allProcedures: { id: string; name: string; category: string | null; default_duration_minutes: number }[];
+  subscription?: ClinicSubscriptionRow | null;
   isAdmin: boolean;
 }) {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingProf, setEditingProf] = useState<ProfessionalDetail | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const maxProf = subscription?.max_professionals;
+  const activeCount = professionals.filter((p) => p.active).length;
+  const isLimitReached = Boolean(maxProf && activeCount >= maxProf);
 
   function openNew() {
     setEditingProf(null);
@@ -57,10 +65,28 @@ export function ProfessionalsTable({
     });
   }
 
-  const activeCount = professionals.filter((p) => p.active).length;
-
   return (
     <div className="space-y-4">
+      {/* Banner de cota atingida se houver */}
+      {isLimitReached && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
+          <div className="flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-amber-200 text-amber-800 font-bold">!</span>
+            <div>
+              <p className="font-bold">Limite de profissionais atingido no seu plano ({activeCount} de {maxProf})</p>
+              <p className="text-[11px] text-amber-700">Faça upgrade de plano para cadastrar mais profissionais na equipe.</p>
+            </div>
+          </div>
+          <Link
+            href="/configuracoes/plano"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-amber-700 px-3 py-1.5 font-bold text-white transition-all hover:bg-amber-800 shadow-xs"
+          >
+            <Sparkles size={12} />
+            Ver Planos & Upgrade
+          </Link>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -68,6 +94,11 @@ export function ProfessionalsTable({
           <p className="text-xs muted">
             {professionals.length} profissional{professionals.length !== 1 ? "is" : ""} cadastrado{professionals.length !== 1 ? "s" : ""} •{" "}
             <span className="font-semibold text-emerald-600">{activeCount} ativo{activeCount !== 1 ? "s" : ""}</span>
+            {maxProf && (
+              <span className="ml-1 text-slate-500">
+                (limite de {maxProf} no Plano {subscription?.plan_tier})
+              </span>
+            )}
           </p>
         </div>
 
@@ -75,7 +106,11 @@ export function ProfessionalsTable({
           <button
             type="button"
             onClick={openNew}
-            className="button button-primary !py-2 !px-4 text-xs font-semibold shadow-xs"
+            disabled={isLimitReached}
+            className={`button button-primary !py-2 !px-4 text-xs font-semibold shadow-xs ${
+              isLimitReached ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            title={isLimitReached ? "Limite do plano atingido" : undefined}
           >
             <Plus size={15} />
             Novo profissional

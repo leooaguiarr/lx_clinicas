@@ -10,6 +10,7 @@ import { dateLabel } from "@/lib/dates";
 import { ROLE_LABEL } from "@/lib/domain";
 import {
   getClinic,
+  getSubscription,
   listInsurance,
   listIntegrationTokens,
   listMembers,
@@ -18,8 +19,11 @@ import {
 } from "@/lib/queries/settings";
 import { brl } from "@/lib/utils";
 
+import { SubscriptionSection } from "./subscription-section";
+
 const META: Record<string, { title: string; description: string }> = {
   clinica: { title: "Dados da clínica", description: "Informações gerais e funcionamento" },
+  plano: { title: "Plano & Assinatura", description: "Gerencie seu plano, cotas contratadas e faturamento" },
   profissionais: { title: "Profissionais", description: "Equipe clínica e disponibilidade" },
   procedimentos: { title: "Procedimentos", description: "Serviços, duração e valores" },
   convenios: { title: "Convênios", description: "Operadoras e planos" },
@@ -49,6 +53,7 @@ export async function SettingsPage({ kind }: { kind: string }) {
         <SettingsNav />
         <section className="panel p-5">
           {kind === "clinica" && <ClinicSection clinicId={session.clinicId} canEdit={isAdmin} />}
+          {kind === "plano" && <PlanSection clinicId={session.clinicId} isAdmin={isAdmin} />}
           {kind === "profissionais" && <ProfessionalsSection clinicId={session.clinicId} isAdmin={isAdmin} />}
           {kind === "procedimentos" && <ProceduresSection clinicId={session.clinicId} />}
           {kind === "convenios" && <InsuranceSection clinicId={session.clinicId} />}
@@ -78,16 +83,34 @@ async function ClinicSection({ clinicId, canEdit }: { clinicId: string; canEdit:
   );
 }
 
+async function PlanSection({ clinicId, isAdmin }: { clinicId: string; isAdmin: boolean }) {
+  const [subscription, professionals] = await Promise.all([
+    getSubscription(clinicId),
+    listProfessionals(clinicId),
+  ]);
+  const activeCount = professionals.filter((p) => p.active).length;
+
+  return (
+    <SubscriptionSection
+      subscription={subscription}
+      activeProfessionalsCount={activeCount}
+      isAdmin={isAdmin}
+    />
+  );
+}
+
 async function ProfessionalsSection({ clinicId, isAdmin }: { clinicId: string; isAdmin: boolean }) {
-  const [professionals, procedures] = await Promise.all([
+  const [professionals, procedures, subscription] = await Promise.all([
     listProfessionals(clinicId),
     listProcedures(clinicId),
+    getSubscription(clinicId),
   ]);
 
   return (
     <ProfessionalsTable
       professionals={professionals}
       allProcedures={procedures}
+      subscription={subscription}
       isAdmin={isAdmin}
     />
   );

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireSession } from "@/lib/auth/session";
 import { logError } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
+import type { BillingCycle, PlanTier } from "@/types/database";
 
 const clinicSchema = z.object({
   name: z.string().min(2, "Informe o nome fantasia"),
@@ -134,6 +135,34 @@ export async function saveProfessional(
 
   let targetId = input.id;
 
+  // Checa limites de cota da assinatura da clínica
+  if (input.active) {
+    const { data: subscription } = await supabase
+      .from("clinic_subscriptions")
+      .select("max_professionals, plan_tier")
+      .eq("clinic_id", session.clinicId)
+      .maybeSingle();
+
+    if (subscription?.max_professionals) {
+      let query = supabase
+        .from("professionals")
+        .select("id", { count: "exact", head: true })
+        .eq("clinic_id", session.clinicId)
+        .eq("active", true);
+
+      if (targetId) {
+        query = query.neq("id", targetId);
+      }
+
+      const { count } = await query;
+      if ((count ?? 0) >= subscription.max_professionals) {
+        return {
+          error: `Limite atingido: o plano atual (${subscription.plan_tier}) permite até ${subscription.max_professionals} profissionais ativos. Altere seu plano em Configurações > Plano & Assinatura para adicionar mais.`,
+        };
+      }
+    }
+  }
+
   if (targetId) {
     const { error: updateError } = await supabase
       .from("professionals")
@@ -258,4 +287,44 @@ export async function toggleProfessionalActive(
   revalidatePath("/agenda");
   return { success: true };
 }
+
+export async function updateSubscriptionPlan(
+  planTier: PlanTier,
+  billingCycle: BillingCycle = "monthly",
+): Promise<{ success: boolean; error?: string }> {
+  const session = await requireSession();
+  if (session.role !== "admin") {
+    return { success: false, error: "Apenas administradores podem alterar o plano." };
+  }
+
+  const maxProfessionals = planTier === "essencial" ? 2 : planTier === "profissional" ? 6 : null;
+  const aiAgentEnabled = planTier !== "essencial";
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clinic_subscriptions")
+    .upsert(
+      {
+        clinic_id: session.clinicId,
+        plan_tier: planTier,
+        billing_cycle: billingCycle,
+        status: "active",
+        max_professionals: maxProfessionals,
+        ai_agent_enabled: aiAgentEnabled,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "clinic_id" },
+    );
+
+  if (error) {
+    logError("action.updateSubscriptionPlan", error, { clinicId: session.clinicId, planTier });
+    return { success: false, error: "Falha ao alterar plano da assinatura." };
+  }
+
+  revalidatePath("/configuracoes/plano");
+  revalidatePath("/configuracoes/profissionais");
+  revalidatePath("/agenda");
+  return { success: true };
+}
+
 

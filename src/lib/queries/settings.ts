@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { dateLabel, shortDateTimeLabel } from "@/lib/dates";
-import type { ClinicRole } from "@/types/database";
+import type { ClinicRole, ClinicSubscriptionRow } from "@/types/database";
 
 export async function getClinic(clinicId: string) {
   const supabase = await createClient();
@@ -167,3 +167,24 @@ export async function listIntegrationTokens(clinicId: string, timezone: string) 
     last_used_label: token.last_used_at ? shortDateTimeLabel(token.last_used_at, timezone) : "Nunca usado",
   }));
 }
+
+export async function getSubscription(clinicId: string): Promise<ClinicSubscriptionRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("clinic_subscriptions")
+    .select("*")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+
+  if (error || !data) {
+    const admin = createAdminClient();
+    const { data: adminData } = await admin
+      .from("clinic_subscriptions")
+      .select("*")
+      .eq("clinic_id", clinicId)
+      .maybeSingle();
+    return adminData ?? null;
+  }
+  return data;
+}
+
